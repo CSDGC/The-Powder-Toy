@@ -21,7 +21,6 @@ int create_n_parts(int n, int x, int y, float vx, float vy, float temp, int t)//
 			return -1;
 		i = pfree;
 		pfree = parts[i].life;
-		if (i>parts_lastActiveIndex) parts_lastActiveIndex = i;
 
 		parts[i].x = (float)x;
 		parts[i].y = (float)y;
@@ -50,7 +49,7 @@ int update_NEUT(UPDATE_FUNC_ARGS) {
 			if (x+rx>=0 && y+ry>0 && x+rx<XRES && y+ry<YRES && (rx || ry))
 			{
 				r = pmap[y+ry][x+rx];
-				if (!r)
+				if ((r>>8)>=NPART || !r)
 					continue;
 				if ((r&0xFF)==PT_WATR || (r&0xFF)==PT_ICEI || (r&0xFF)==PT_SNOW)
 				{

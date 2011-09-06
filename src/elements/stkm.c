@@ -41,59 +41,34 @@ int run_stickman(float* playerp, UPDATE_FUNC_ARGS) {
 		return 1;
 	}
 
-	//Follow gravity
-	float gvx, gvy;
-	gvx = gvy = 0.0f;
-	switch (gravityMode)
-	{
-		default:
-		case 0:
-			gvy = 1;
-			break;
-		case 1:
-			gvy = gvx = 0.0f;
-			break;
-		case 2:
-			{
-				float gravd;
-				gravd = 0.01f - hypotf((parts[i].x - XCNTR), (parts[i].y - YCNTR));
-				gvx = ((float)(parts[i].x - XCNTR) / gravd);
-				gvy = ((float)(parts[i].y - YCNTR) / gravd);
-			}
-	}
-
-	gvx += gravx[(int)parts[i].y/CELL][(int)parts[i].x/CELL];
-	gvy += gravy[(int)parts[i].y/CELL][(int)parts[i].x/CELL];
-
-	parts[i].vx -= gvx*dt;  //Head up!
-	parts[i].vy -= gvy*dt;
+	parts[i].vy += -0.7*dt;  //Head up!
 
 	//Verlet integration
-	pp = 2*playerp[3]-playerp[5]+playerp[19]*dt*dt;
+	pp = 2*playerp[3]-playerp[5]+playerp[19]*dt*dt;;
 	playerp[5] = playerp[3];
 	playerp[3] = pp;
-	pp = 2*playerp[4]-playerp[6]+playerp[20]*dt*dt;
+	pp = 2*playerp[4]-playerp[6]+playerp[20]*dt*dt;;
 	playerp[6] = playerp[4];
 	playerp[4] = pp;
 
-	pp = 2*playerp[7]-playerp[9]+(playerp[21]+gvx)*dt*dt;
+	pp = 2*playerp[7]-playerp[9]+playerp[21]*dt*dt;;
 	playerp[9] = playerp[7];
 	playerp[7] = pp;
-	pp = 2*playerp[8]-playerp[10]+(playerp[22]+gvy)*dt*dt;
+	pp = 2*playerp[8]-playerp[10]+(playerp[22]+1)*dt*dt;;
 	playerp[10] = playerp[8];
 	playerp[8] = pp;
 
-	pp = 2*playerp[11]-playerp[13]+playerp[23]*dt*dt;
+	pp = 2*playerp[11]-playerp[13]+playerp[23]*dt*dt;;
 	playerp[13] = playerp[11];
 	playerp[11] = pp;
-	pp = 2*playerp[12]-playerp[14]+playerp[24]*dt*dt;
+	pp = 2*playerp[12]-playerp[14]+playerp[24]*dt*dt;;
 	playerp[14] = playerp[12];
 	playerp[12] = pp;
 
-	pp = 2*playerp[15]-playerp[17]+(playerp[25]+gvx)*dt*dt;
+	pp = 2*playerp[15]-playerp[17]+playerp[25]*dt*dt;;
 	playerp[17] = playerp[15];
 	playerp[15] = pp;
-	pp = 2*playerp[16]-playerp[18]+(playerp[26]+gvy)*dt*dt;
+	pp = 2*playerp[16]-playerp[18]+(playerp[26]+1)*dt*dt;;
 	playerp[18] = playerp[16];
 	playerp[16] = pp;
 
@@ -110,70 +85,98 @@ int run_stickman(float* playerp, UPDATE_FUNC_ARGS) {
 	playerp[25] = 0;
 	playerp[26] = 0;
 
-	float gx, gy, dl, dr;
-
-	gx = (playerp[7] + playerp[15])/2 - gvy;
-	gy = (playerp[8] + playerp[16])/2 + gvx;
-	dl = pow(gx - playerp[7], 2) + pow(gy - playerp[8], 2);
-	dr = pow(gx - playerp[15], 2) + pow(gy - playerp[16], 2);
-	
 	//Go left
-	if (((int)(playerp[0])&0x01) == 0x01)
+	r = pmap[(int)(parts[i].y+10)][(int)(parts[i].x)];
+	if (((int)(playerp[0])&0x01) == 0x01 && (((r&0xFF)>=PT_NUM) || ptypes[r&0xFF].state != ST_GAS))
 	{
-		if (dl>dr)
+		if (r>=PT_NUM || (ptypes[r&0xFF].state != ST_LIQUID
+		        && (r&0xFF) != PT_LNTG))
 		{
-			if (!eval_move(PT_DUST, playerp[7], playerp[8], NULL))
+			if (pmap[(int)(playerp[8]-1)][(int)(playerp[7])])
 			{
-				playerp[21] = -3*gvy-3*gvx;
-				playerp[22] = 3*gvx-3*gvy;
-				playerp[19] = -gvy;
-				playerp[20] = gvx;
+				playerp[21] = -3;
+				playerp[22] = -2;
+				playerp[19] = -2;
+			}
+
+			if (pmap[(int)(playerp[16]-1)][(int)(playerp[15])])
+			{
+				playerp[25] = -3;
+				playerp[26] = -2;
+				playerp[23] = -2;
 			}
 		}
 		else
 		{
-			if (!eval_move(PT_DUST, playerp[15], playerp[16], NULL))
+			if (pmap[(int)(playerp[8]-1)][(int)(playerp[7])])  //It should move another way in liquids
 			{
-				playerp[25] = -3*gvy-3*gvx;
-				playerp[26] = 3*gvx-3*gvy;
-				playerp[19] = -gvy;
-				playerp[20] = gvx;
+				playerp[21] = -1;
+				playerp[22] = -1;
+				playerp[19] = -1;
+			}
+
+			if (pmap[(int)(playerp[16]-1)][(int)(playerp[15])])
+			{
+				playerp[25] = -1;
+				playerp[26] = -1;
+				playerp[23] = -1;
 			}
 		}
 	}
 
 	//Go right
-	if (((int)(playerp[0])&0x02) == 0x02)
+	r = pmap[(int)(parts[i].y+10)][(int)(parts[i].x)];
+	if (((int)(playerp[0])&0x02) == 0x02 && (((r&0xFF)>=PT_NUM) || ptypes[r&0xFF].state != ST_GAS))
 	{
-		if (dl<dr)
+		if (r>=PT_NUM || (ptypes[r&0xFF].state != ST_LIQUID
+		        && (r&0xFF) != PT_LNTG))
 		{
-			if (!eval_move(PT_DUST, playerp[7], playerp[8], NULL))
+			if (pmap[(int)(playerp[8]-1)][(int)(playerp[7])])
 			{
-				playerp[21] = 3*gvy-3*gvx;
-				playerp[22] = -3*gvx-3*gvy;
-				playerp[19] = gvy;
-				playerp[20] = -gvx;
+				playerp[21] = 3;
+				playerp[22] = -2;
+				playerp[19] = 2;
+			}
+
+			if (pmap[(int)(playerp[16]-1)][(int)(playerp[15])])
+			{
+				playerp[25] = 3;
+				playerp[26] = -2;
+				playerp[23] = 2;
 			}
 		}
 		else
 		{
-			if (!eval_move(PT_DUST, playerp[15], playerp[16], NULL))
+			if (pmap[(int)(playerp[8]-1)][(int)(playerp[7])])
 			{
-				playerp[25] = 3*gvy-3*gvx;
-				playerp[26] = -3*gvx-3*gvy;
-				playerp[19] = gvy;
-				playerp[20] = -gvx;
+				playerp[21] = 1;
+				playerp[22] = -1;
+				playerp[19] = 1;
 			}
+
+			if (pmap[(int)(playerp[16]-1)][(int)(playerp[15])])
+			{
+				playerp[25] = 1;
+				playerp[26] = -1;
+				playerp[23] = 1;
+			}
+
 		}
 	}
 
 	//Jump
-	if (((int)(playerp[0])&0x04) == 0x04 && 
-			(!eval_move(PT_DUST, playerp[7], playerp[8], NULL) || !eval_move(PT_DUST, playerp[15], playerp[16], NULL)))
+	if (((int)(playerp[0])&0x04) == 0x04 && (
+		(pmap[(int)(playerp[8]-0.5)][(int)(playerp[7])]&0xFF)>=PT_NUM ||
+		ptypes[pmap[(int)(playerp[8]-0.5)][(int)(playerp[7])]&0xFF].state != ST_GAS ||
+		(pmap[(int)(playerp[16]-0.5)][(int)(playerp[15])]&0xFF)>=PT_NUM ||
+		ptypes[pmap[(int)(playerp[16]-0.5)][(int)(playerp[15])]&0xFF].state != ST_GAS))
 	{
-		parts[i].vy -= 4*gvy;
-		playerp[22] -= gvy;
-		playerp[26] -= gvy;
+		if (pmap[(int)(playerp[8]-0.5)][(int)(playerp[7])] || pmap[(int)(playerp[16]-0.5)][(int)(playerp[15])])
+		{
+			parts[i].vy = -5;
+			playerp[22] -= 1;
+			playerp[26] -= 1;
+		}
 	}
 
 	//Charge detector wall if foot inside
@@ -188,10 +191,10 @@ int run_stickman(float* playerp, UPDATE_FUNC_ARGS) {
 			if (x+rx>=0 && y+ry>0 && x+rx<XRES && y+ry<YRES && (rx || ry))
 			{
 				r = pmap[y+ry][x+rx];
-				if (!r)
+				if (!r || (r>>8)>=NPART)
 					r = photons[y+ry][x+rx];
 
-				if (!r && !bmap[(y+ry)/CELL][(x+rx)/CELL])
+				if ((!r || (r>>8)>=NPART) && !bmap[(y+ry)/CELL][(x+rx)/CELL])
 					continue;
 				
 				if (ptypes[r&0xFF].falldown!=0 || (r&0xFF) == PT_NEUT || (r&0xFF) == PT_PHOT)
@@ -215,10 +218,6 @@ int run_stickman(float* playerp, UPDATE_FUNC_ARGS) {
 				}
 				if (bmap[(ry+y)/CELL][(rx+x)/CELL]==WL_FAN)
 					playerp[2] = SPC_AIR;
-				if ((r&0xFF)==PT_PRTI)
-					STKM_interact(playerp, i, rx, ry);
-				if (!parts[i].type)//STKM_interact may kill STKM
-					return 1;
 			}
 
 	//Head position
@@ -230,6 +229,8 @@ int run_stickman(float* playerp, UPDATE_FUNC_ARGS) {
 	{
 		ry -= 2*(rand()%2)+1;
 		r = pmap[ry][rx];
+		if (!((r>>8)>=NPART))
+		{
 			if (ptypes[r&0xFF].state == ST_SOLID)
 			{
 				create_part(-1, rx, ry, PT_SPRK);
@@ -238,15 +239,11 @@ int run_stickman(float* playerp, UPDATE_FUNC_ARGS) {
 			{
 				int np = -1;
 				if (playerp[2] == SPC_AIR)
-					create_parts(rx + 3*((((int)playerp[1])&0x02) == 0x02) - 3*((((int)playerp[1])&0x01) == 0x01), ry, 4, 4, SPC_AIR, 0);
+					create_parts(rx + 3*((((int)playerp[1])&0x02) == 0x02) - 3*((((int)playerp[1])&0x01) == 0x01), ry, 4, 4, SPC_AIR);
 				else
 					np = create_part(-1, rx, ry, playerp[2]);
 				if ( (np < NPART) && np>=0 && playerp[2] != PT_PHOT && playerp[2] != SPC_AIR)
-				{
-					parts[np].vx -= -gvy*(5*((((int)playerp[1])&0x02) == 0x02) - 5*(((int)(playerp[1])&0x01) == 0x01));
-					parts[np].vy -= gvx*(5*((((int)playerp[1])&0x02) == 0x02) - 5*(((int)(playerp[1])&0x01) == 0x01));
-					parts[i].vx -= (ptypes[(int)playerp[2]].weight*parts[np].vx)/1000;
-				}
+					parts[np].vx = parts[np].vx + 5*((((int)playerp[1])&0x02) == 0x02) - 5*(((int)(playerp[1])&0x01) == 0x01);
 				if ((np < NPART) && np>=0 && playerp[2] == PT_PHOT)
 				{
 					int random = abs(rand()%3-1)*3;
@@ -265,6 +262,7 @@ int run_stickman(float* playerp, UPDATE_FUNC_ARGS) {
 				}
 
 			}
+		}
 	}
 
 	//Simulation of joints
@@ -292,146 +290,136 @@ int run_stickman(float* playerp, UPDATE_FUNC_ARGS) {
 	playerp[11] += (playerp[11]-parts[i].x)*d;
 	playerp[12] += (playerp[12]-parts[i].y)*d;
 
-	if (!eval_move(PT_DUST, playerp[7], playerp[8], NULL))
+	//Side collisions checking
+	for (rx = -3; rx <= 3; rx++)
 	{
-		playerp[7] = playerp[9];
-		playerp[8] = playerp[10];
+		r = pmap[(int)(playerp[16]-2)][(int)(playerp[15]+rx)];
+		if (r && ((r&0xFF)>=PT_NUM || (ptypes[r&0xFF].state != ST_GAS && ptypes[r&0xFF].state != ST_LIQUID)))
+			playerp[15] -= rx;
+
+		r = pmap[(int)(playerp[8]-2)][(int)(playerp[7]+rx)];
+		if (r && ((r&0xFF)>=PT_NUM || (ptypes[r&0xFF].state != ST_GAS && ptypes[r&0xFF].state != ST_LIQUID)))
+			playerp[7] -= rx;
 	}
 
-	if (!eval_move(PT_DUST, playerp[15], playerp[16], NULL))
+	//Collision checks
+	for (ry = -2-(int)parts[i].vy; ry<=0; ry++)
 	{
-		playerp[15] = playerp[17];
-		playerp[16] = playerp[18];
-	}
+		r = pmap[(int)(playerp[8]+ry)][(int)(playerp[7]+0.5)];  //This is to make coding more pleasant :-)
 
-	//This makes stick man "pop" from obstacles
-	if (!eval_move(PT_DUST, playerp[7], playerp[8], NULL))
-	{
-		float t;
-		t = playerp[7]; playerp[7] = playerp[9]; playerp[9] = t;
-		t = playerp[8]; playerp[8] = playerp[10]; playerp[10] = t;
-	}
+		//For left leg
+		if (r && (r&0xFF)!=PT_STKM)
+		{
+			if ((r&0xFF)<PT_NUM && (ptypes[r&0xFF].state == ST_LIQUID || (r&0xFF) == PT_LNTG)) //Liquid checks
+			{
+				if (parts[i].y<(playerp[8]-10))
+					parts[i].vy = 1*dt;
+				else
+					parts[i].vy = 0;
+				if (abs(parts[i].vx)>1)
+					parts[i].vx *= 0.5*dt;
+			}
+			else
+			{
+				if ((r&0xFF)>=PT_NUM || ptypes[r&0xFF].state != ST_GAS)
+				{
+					playerp[8] += ry-1;
+					parts[i].vy -= 0.5*parts[i].vy*dt;
+				}
+			}
+			playerp[9] = playerp[7];
+		}
 
-	if (!eval_move(PT_DUST, playerp[15], playerp[16], NULL))
-	{
-		float t;
-		t = playerp[15]; playerp[15] = playerp[17]; playerp[17] = t;
-		t = playerp[16]; playerp[16] = playerp[18]; playerp[18] = t;
+		r = pmap[(int)(playerp[16]+ry)][(int)(playerp[15]+0.5)];
+
+		//For right leg
+		if (r && (r&0xFF)!=PT_STKM)
+		{
+			if ((r&0xFF)<PT_NUM && (ptypes[r&0xFF].state == ST_LIQUID || (r&0xFF) == PT_LNTG))
+			{
+				if (parts[i].y<(playerp[16]-10))
+					parts[i].vy = 1*dt;
+				else
+					parts[i].vy = 0;
+				if (abs(parts[i].vx)>1)
+					parts[i].vx *= 0.5*dt;
+			}
+			else
+			{
+				if ((r&0xFF)>=PT_NUM || ptypes[r&0xFF].state != ST_GAS)
+				{
+					playerp[16] += ry-1;
+					parts[i].vy -= 0.5*parts[i].vy*dt;
+				}
+			}
+			playerp[17] = playerp[15];
+		}
+
+		//If it falls too fast
+		if (parts[i].vy>=30)
+		{
+			parts[i].y -= (10+ry)*dt;
+			parts[i].vy = -10*dt;
+		}
+
 	}
 
 	//Keeping legs distance
-	if ((pow((playerp[7] - playerp[15]), 2) + pow((playerp[8]-playerp[16]), 2))<16)
+	if (pow((playerp[7] - playerp[15]), 2)<16 && pow((playerp[8]-playerp[16]), 2)<1)
 	{
-		float tvx, tvy;
-		tvx = -gvy;
-		tvy = gvx;
-
-		if (tvx || tvy)
-		{
-			playerp[21] -= 0.2*tvx/hypot(tvx, tvy);
-			playerp[22] -= 0.2*tvy/hypot(tvx, tvy);
-
-			playerp[25] += 0.2*tvx/hypot(tvx, tvy);
-			playerp[26] += 0.2*tvy/hypot(tvx, tvy);
-		}
+		playerp[21] -= 0.2;
+		playerp[25] += 0.2;
 	}
 
-	if ((pow((playerp[3] - playerp[11]), 2) + pow((playerp[4]-playerp[12]), 2))<16)
+	if (pow((playerp[3] - playerp[11]), 2)<16 && pow((playerp[4]-playerp[12]), 2)<1)
 	{
-		float tvx, tvy;
-		tvx = -gvy;
-		tvy = gvx;
-
-		if (tvx || tvy)
-		{
-			playerp[19] -= 0.2*tvx/hypot(tvx, tvy);
-			playerp[20] -= 0.2*tvy/hypot(tvx, tvy);
-
-			playerp[23] += 0.2*tvx/hypot(tvx, tvy);
-			playerp[24] += 0.2*tvy/hypot(tvx, tvy);
-		}
+		playerp[19] -= 0.2;
+		playerp[23] += 0.2;
 	}
 
 	//If legs touch something
-	STKM_interact(playerp, i, (int)(playerp[7]+0.5), (int)(playerp[8]+0.5));
-	STKM_interact(playerp, i, (int)(playerp[15]+0.5), (int)(playerp[16]+0.5));
-	if (!parts[i].type)
-		return 1;
-
-	parts[i].ctype = playerp[2];
-	return 0;
-}
-
-void STKM_interact(float* playerp, int i, int x, int y)
-{
-	int r;
-	if (x<0 || y<0 || x>=XRES || y>=YRES || !parts[i].type)
-		return;
-	r = pmap[y][x];
-	if (r)
+	r = pmap[(int)(playerp[8]+0.5)][(int)(playerp[7]+0.5)];
+	if ((r&0xFF)==PT_SPRK && r && (r>>8)<NPART) //If on charge
 	{
-		if ((r&0xFF)==PT_SPRK) //If on charge
-		{
-			parts[i].life -= (int)(rand()*20/RAND_MAX)+32;
-		}
+		parts[i].life -= (int)(rand()/1000)+38;
+	}
 
-		if (ptypes[r&0xFF].hconduct && (parts[r>>8].temp>=323 || parts[r>>8].temp<=243))
+	if (r>0 && (r>>8)<NPART)
+	{
+		if (parts[r>>8].temp>=323 || parts[r>>8].temp<=243) //If hot or cold
+		{
+			parts[i].life -= 2;
+			playerp[26] -= 1;
+		}
+	}
+
+	if ((r&0xFF)==PT_ACID)  //If on acid
+		parts[i].life -= 5;
+
+	if ((r&0xFF)==PT_PLUT)  //If on plut
+		parts[i].life -= 1;
+
+	r = pmap[(int)(playerp[16]+0.5)][(int)(playerp[15]+0.5)];
+	if ((r&0xFF)==PT_SPRK && r && (r>>8)<NPART) //If on charge
+	{
+		parts[i].life -= (int)(rand()/1000)+38;
+	}
+
+	if (r>0 && (r>>8)<NPART) //If hot or cold
+	{
+		if (parts[r>>8].temp>=323 || parts[r>>8].temp<=243)
 		{
 			parts[i].life -= 2;
 			playerp[22] -= 1;
 		}
-
-		if ((r&0xFF)==PT_ACID)  //If on acid
-			parts[i].life -= 5;
-
-		if ((r&0xFF)==PT_PLUT)  //If on plut
-			parts[i].life -= 1;
-			
-		if (ptypes[r&0xFF].properties&PROP_DEADLY)
-			parts[i].life -= 1;
-
-		if ((r&0xFF)==PT_PRTI && parts[i].type)
-		{
-			int nnx, count=1;//gives rx=0, ry=1 in update_PRTO
-			parts[r>>8].tmp = (int)((parts[r>>8].temp-73.15f)/100+1);
-			if (parts[r>>8].tmp>=CHANNELS) parts[r>>8].tmp = CHANNELS-1;
-			else if (parts[r>>8].tmp<0) parts[r>>8].tmp = 0;
-			for (nnx=0; nnx<80; nnx++)
-				if (!portalp[parts[r>>8].tmp][count][nnx].type)
-				{
-					portalp[parts[r>>8].tmp][count][nnx] = parts[i];
-					kill_part(i);
-					playerp[27] = 1;//stop SPWN creating a new STKM while he is in portal
-					break;
-				}
-		}
 	}
-}
 
-void STKM_init_legs(float* playerp, int i)
-{
-	int x, y;
+	if ((r&0xFF)==PT_ACID)  //If on acid
+		parts[i].life -= 5;
 
-	x = (int)(parts[i].x+0.5f);
-	y = (int)(parts[i].y+0.5f);
+	if ((r&0xFF)==PT_PLUT)  //If on plut
+		parts[i].life -= 1;
 
-	playerp[3] = x-1;
-	playerp[4] = y+6;
-	playerp[5] = x-1;
-	playerp[6] = y+6;
-
-	playerp[7] = x-3;
-	playerp[8] = y+12;
-	playerp[9] = x-3;
-	playerp[10] = y+12;
-
-	playerp[11] = x+1;
-	playerp[12] = y+6;
-	playerp[13] = x+1;
-	playerp[14] = y+6;
-
-	playerp[15] = x+3;
-	playerp[16] = y+12;
-	playerp[17] = x+3;
-	playerp[18] = y+12;
+	parts[i].ctype = playerp[2];
+	return 0;
 }

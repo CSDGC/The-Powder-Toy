@@ -7,7 +7,7 @@ int update_SHLD1(UPDATE_FUNC_ARGS) {
 			if (x+rx>=0 && y+ry>0 && x+rx<XRES && y+ry<YRES && (rx || ry))
 			{
 				r = pmap[y+ry][x+rx];
-				if (!r)
+				if ((r>>8)>=NPART || !r)
 					continue;
 				else if ((r&0xFF)==PT_SPRK&&parts[i].life==0)
 				{
@@ -42,6 +42,8 @@ int update_SHLD2(UPDATE_FUNC_ARGS) {
 			if (x+rx>=0 && y+ry>0 && x+rx<XRES && y+ry<YRES && (rx || ry))
 			{
 				r = pmap[y+ry][x+rx];
+				if ((r>>8)>=NPART)
+					continue;
 				if (!r && parts[i].life>0)
 					create_part(-1,x+rx,y+ry,PT_SHLD1);
 				if (!r)
@@ -80,6 +82,8 @@ int update_SHLD3(UPDATE_FUNC_ARGS) {
 			if (x+rx>=0 && y+ry>0 && x+rx<XRES && y+ry<YRES && (rx || ry))
 			{
 				r = pmap[y+ry][x+rx];
+				if ((r>>8)>=NPART)
+					continue;
 				if (!r)
 				{
 					if (1>rand()%2500)
@@ -128,6 +132,8 @@ int update_SHLD4(UPDATE_FUNC_ARGS) {
 			if (x+rx>=0 && y+ry>0 && x+rx<XRES && y+ry<YRES && (rx || ry))
 			{
 				r = pmap[y+ry][x+rx];
+				if ((r>>8)>=NPART)
+					continue;
 				if (!r)
 				{
 					if (1>rand()%5500)

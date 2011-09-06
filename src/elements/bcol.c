@@ -1,7 +1,7 @@
 #include <element.h>
 
 int update_BCOL(UPDATE_FUNC_ARGS) {
-	int r, rx, ry, trade, temp;
+	int r, rx, ry;
 	if (parts[i].life<=0) {
 		create_part(i, x, y, PT_FIRE);
 		return 1;
@@ -15,7 +15,7 @@ int update_BCOL(UPDATE_FUNC_ARGS) {
 			if (x+rx>=0 && y+ry>0 && x+rx<XRES && y+ry<YRES && (rx || ry))
 			{
 				r = pmap[y+ry][x+rx];
-				if (!r)
+				if ((r>>8)>=NPART || !r)
 					continue;
 				if (((r&0xFF)==PT_FIRE || (r&0xFF)==PT_PLSM) && 1>(rand()%500))
 				{
@@ -32,37 +32,5 @@ int update_BCOL(UPDATE_FUNC_ARGS) {
 					}
 				}
 			}
-	/*if(100-parts[i].life > parts[i].tmp2)
-		parts[i].tmp2 = 100-parts[i].life;
-	if(parts[i].tmp2 < 0) parts[i].tmp2 = 0;
-	for ( trade = 0; trade<4; trade ++)
-	{
-		rx = rand()%5-2;
-		ry = rand()%5-2;
-		if (x+rx>=0 && y+ry>0 && x+rx<XRES && y+ry<YRES && (rx || ry))
-		{
-			r = pmap[y+ry][x+rx];
-			if (!r)
-				continue;
-			if (((r&0xFF)==PT_COAL || (r&0xFF)==PT_BCOL)&&(parts[i].tmp2>parts[r>>8].tmp2)&&parts[i].tmp2>0)//diffusion
-			{
-				int temp = parts[i].tmp2 - parts[r>>8].tmp2;
-				if(temp < 10)
-					continue;
-				if (temp ==1)
-				{
-					parts[r>>8].tmp2 ++;
-					parts[i].tmp2 --;
-				}
-				else if (temp>0)
-				{
-					parts[r>>8].tmp2 += temp/2;
-					parts[i].tmp2 -= temp/2;
-				}
-			}
-		}
-	}*/
-	if(parts[i].temp > parts[i].tmp2)
-		parts[i].tmp2 = parts[i].temp;
 	return 0;
 }

@@ -12,7 +12,7 @@ int update_MERC(UPDATE_FUNC_ARGS) {
 				if (x+rx>=0 && y+ry>0 && x+rx<XRES && y+ry<YRES && (rx || ry))
 				{
 					r = pmap[y+ry][x+rx];
-					if (!r || (parts[i].tmp >=maxtmp))
+					if ((r>>8)>=NPART || !r || (parts[i].tmp >=maxtmp))
 						continue;
 					if ((r&0xFF)==PT_MERC&&33>=rand()/(RAND_MAX/100)+1)
 					{
@@ -30,7 +30,10 @@ int update_MERC(UPDATE_FUNC_ARGS) {
 				if (x+rx>=0 && y+ry>0 && x+rx<XRES && y+ry<YRES && (rx || ry))
 				{
 					r = pmap[y+ry][x+rx];
-					if (parts[i].tmp<=maxtmp)
+					if ((r>>8)>=NPART || (parts[i].tmp<=maxtmp))
+						continue;
+					if ((bmap[(y+ry)/CELL][(x+rx)/CELL]==WL_WALLELEC||bmap[(y+ry)/CELL][(x+rx)/CELL]==WL_EWALL||bmap[(y+ry)/CELL][(x+rx)/CELL]==WL_DESTROYALL||bmap[(y+ry)/CELL][(x+rx)/CELL]==WL_WALL||
+					        bmap[(y+ry)/CELL][(x+rx)/CELL]==WL_ALLOWAIR||bmap[(y+ry)/CELL][(x+rx)/CELL]==WL_ALLOWSOLID||bmap[(y+ry)/CELL][(x+rx)/CELL]==WL_ALLOWGAS))
 						continue;
 					if ((!r)&&parts[i].tmp>=1)//if nothing then create deut
 					{
@@ -48,7 +51,7 @@ int update_MERC(UPDATE_FUNC_ARGS) {
 		if (x+rx>=0 && y+ry>0 && x+rx<XRES && y+ry<YRES && (rx || ry))
 		{
 			r = pmap[y+ry][x+rx];
-			if (!r)
+			if ((r>>8)>=NPART || !r)
 				continue;
 			if ((r&0xFF)==PT_MERC&&(parts[i].tmp>parts[r>>8].tmp)&&parts[i].tmp>0)//diffusion
 			{

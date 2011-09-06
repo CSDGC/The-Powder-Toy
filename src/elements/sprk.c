@@ -35,7 +35,7 @@ int update_SPRK(UPDATE_FUNC_ARGS) {
 		nearp = nearest_part(i, PT_ETRD);
 		if (nearp!=-1&&parts_avg(i, nearp, PT_INSL)!=PT_INSL)
 		{
-			create_line(x, y, (int)(parts[nearp].x+0.5f), (int)(parts[nearp].y+0.5f), 0, 0, PT_PLSM, 0);
+			create_line(x, y, (int)(parts[nearp].x+0.5f), (int)(parts[nearp].y+0.5f), 0, 0, PT_PLSM);
 			part_change_type(i,x,y,ct);
 			ct = parts[i].ctype = PT_NONE;
 			parts[i].life = 20;
@@ -58,7 +58,7 @@ int update_SPRK(UPDATE_FUNC_ARGS) {
 				if (x+rx>=0 && y+ry>0 && x+rx<XRES && y+ry<YRES && (rx || ry))
 				{
 					r = pmap[y+ry][x+rx];
-					if (!r)
+					if ((r>>8)>=NPART || !r)
 						continue;
 					if (((r&0xFF) == PT_DSTW && 30>(rand()/(RAND_MAX/1000))) ||
 					        ((r&0xFF) == PT_SLTW && 30>(rand()/(RAND_MAX/1000))) ||
@@ -76,7 +76,7 @@ int update_SPRK(UPDATE_FUNC_ARGS) {
 			if (x+rx>=0 && y+ry>0 && x+rx<XRES && y+ry<YRES && (rx || ry))
 			{
 				r = pmap[y+ry][x+rx];
-				if (!r)
+				if ((r>>8)>=NPART || !r)
 					continue;
 				rt = parts[r>>8].type;
 				conduct_sprk = 1;
@@ -152,7 +152,7 @@ int update_SPRK(UPDATE_FUNC_ARGS) {
 					else if (rt==PT_INST) {
 						if (parts[i].life>=3&&parts[r>>8].life==0)
 						{
-							flood_parts(x+rx,y+ry,PT_SPRK,PT_INST,-1, 0);//spark the wire
+							flood_parts(x+rx,y+ry,PT_SPRK,PT_INST,-1);//spark the wire
 						}
 					}
 					else if (parts[r>>8].life==0 && (parts[i].life<3 || ((r>>8)<i && parts[i].life<4))) {

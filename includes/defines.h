@@ -6,21 +6,20 @@
 #else
 #define PATH_SEP "/"
 #endif
- 
+
 //VersionInfoStart
-#define SAVE_VERSION 60
-#define MINOR_VERSION 0
-#define BETA
+#define SAVE_VERSION 53
+#define MINOR_VERSION 3
+#define ENGMOD1_VERSION 0
+#define ENGMOD2_VERSION 2
+//#define BETA
 //VersionInfoEnd
 
-#define IDENT_VERSION "G" //Change this if you're not Simon! It should be a single letter.
+#define IDENT_VERSION "C" //Change this if you're not Simon! It should be a single letter.
 
 #define SERVER "powdertoy.co.uk"
-#define SCRIPTSERVER "powdertoy.co.uk"
 
 #define LOCAL_SAVE_DIR "Saves"
-
-#define LOCAL_LUA_DIR "Lua"
 
 #define THUMB_CACHE_SIZE 256
 
@@ -53,7 +52,7 @@
 
 #define GRAV_DIFF
 
-#define MAXSIGNS 16
+#define MAXSIGNS 22
 #define TAG_MAX 256
 
 #define ZSIZE_D	16
@@ -132,10 +131,6 @@ typedef unsigned int pixel;
 #define SDEUT
 //#define REALHEAT
 
-#define DEBUG_PARTS		0x0001
-#define DEBUG_PARTCOUNT	0x0002
-#define DEBUG_DRAWTOOL	0x0004
-
 typedef unsigned char uint8;
 
 extern int amd;
@@ -152,14 +147,13 @@ int GRAV_G2;
 int GRAV_B2;
 
 extern int legacy_enable;
+extern int oxy_enable;
 extern int ngrav_enable; //Newtonian gravity
 extern int sound_enable;
 extern int kiosk_enable;
 extern int aheat_enable;
 extern int decorations_enable;
 extern int hud_enable;
-extern int debug_flags;
-int limitFPS;
 
 extern int active_menu;
 

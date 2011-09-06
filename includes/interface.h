@@ -1,8 +1,8 @@
 #ifndef INTERFACE_H
 #define INTERFACE_H
-#include <SDL/SDL.h>
+#include <SDL.h>
 #if (defined(LIN32) || defined(LIN64)) && defined(SDL_VIDEO_DRIVER_X11)
-#include <SDL/SDL_syswm.h>
+#include <SDL_syswm.h>
 #endif
 #include "graphics.h"
 
@@ -22,24 +22,25 @@ struct menu_wall
 };
 typedef struct menu_wall menu_wall;
 
-#define SC_WALL 0
-#define SC_ELEC 1
-#define SC_POWERED 2
-#define SC_EXPLOSIVE 3
-#define SC_GAS 4
-#define SC_LIQUID 5
-#define SC_POWDERS 6
-#define SC_SOLIDS 7
-#define SC_NUCLEAR 8
-#define SC_SPECIAL 9
-#define SC_LIFE 10
-#define SC_TOOL 11
+#define SC_WALL 1
+#define SC_ELEC 2
+#define SC_POWERED 3
+#define SC_EXPLOSIVE 4
+#define SC_GAS 5
+#define SC_LIQUID 6
+#define SC_POWDERS 7
+#define SC_SOLIDS 8
+#define SC_NUCLEAR 9
+#define SC_SPECIAL 10
+#define SC_LIFE 11
 #define SC_CRACKER 13
 #define SC_CRACKER2 14
+#define SC_FUEL 0
 #define SC_TOTAL 12
 
 static menu_section msections[] = //doshow does not do anything currently.
 {
+    {"\xC4", "Fuels", 0, 1},
 	{"\xC1", "Walls", 0, 1},
 	{"\xC2", "Electronics", 0, 1},
 	{"\xD6", "Powered Materials", 0, 1},
@@ -51,7 +52,6 @@ static menu_section msections[] = //doshow does not do anything currently.
 	{"\xC6", "Radioactive", 0, 1},
 	{"\xCC", "Special", 0, 1},
 	{"\xD2", "Life", 0, 1},
-	{"\xD7", "Tools", 0, 1},
 	{"\xD2", "More Life", 0, 1},
 	{"\xC8", "", 0, 0},
 	{"\xC8", "Cracker", 0, 0},
@@ -134,7 +134,7 @@ typedef struct ui_richtext ui_richtext;
 
 int SLALT;
 extern SDLMod sdl_mod;
-extern int sdl_key, sdl_rkey, sdl_wheel, sdl_caps, sdl_ascii, sdl_zoom_trig;
+extern int sdl_key, sdl_wheel, sdl_caps, sdl_ascii, sdl_zoom_trig;
 #if (defined(LIN32) || defined(LIN64)) && defined(SDL_VIDEO_DRIVER_X11)
 extern SDL_SysWMinfo sdl_wminfo;
 extern Atom XA_CLIPBOARD, XA_TARGETS;

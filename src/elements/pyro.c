@@ -14,13 +14,12 @@ int update_PYRO(UPDATE_FUNC_ARGS) {
 			t = PT_DSTW;
 			part_change_type(i,x,y,t);
 			parts[i].life = 0;
-			parts[i].ctype = PT_FIRE;
 		}
-		else if (parts[i].temp<625)
+		else if (parts[i].temp<825)
 		{
 			t = PT_SMKE;
 			part_change_type(i,x,y,t);
-			parts[i].life = rand()%20+250;
+			parts[i].life = rand()%20+300;
 		}
 	}
 	for (rx=-2; rx<3; rx++)
@@ -28,7 +27,7 @@ int update_PYRO(UPDATE_FUNC_ARGS) {
 			if (x+rx>=0 && y+ry>0 && x+rx<XRES && y+ry<YRES && (rx || ry))
 			{
 				r = pmap[y+ry][x+rx];
-				if (!r)
+				if ((r>>8)>=NPART || !r)
 					continue;
 				if (bmap[(y+ry)/CELL][(x+rx)/CELL] && bmap[(y+ry)/CELL][(x+rx)/CELL]!=WL_STREAM)
 					continue;
@@ -46,6 +45,10 @@ int update_PYRO(UPDATE_FUNC_ARGS) {
 					if (ptypes[rt].explosive)
 						pv[y/CELL][x/CELL] += 0.25f * CFDS;
 				}
+                if ((r&0xFF)==PT_N2)
+					part_change_type(i,x,y,PT_NONE);
+                if ((r&0xFF)==PT_N2O)
+					parts[i].life = parts[i].life + 0.5;
 			}
 	if (legacy_enable) update_legacy_PYRO(UPDATE_FUNC_SUBCALL_ARGS);
 	return 0;
@@ -58,7 +61,7 @@ int update_legacy_PYRO(UPDATE_FUNC_ARGS) {
 			if (x+rx>=0 && y+ry>0 && x+rx<XRES && y+ry<YRES && (rx || ry))
 			{
 				r = pmap[y+ry][x+rx];
-				if (!r)
+				if ((r>>8)>=NPART || !r)
 					continue;
 				if (bmap[(y+ry)/CELL][(x+rx)/CELL] && bmap[(y+ry)/CELL][(x+rx)/CELL]!=WL_STREAM)
 					continue;

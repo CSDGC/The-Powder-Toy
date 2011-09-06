@@ -9,7 +9,7 @@ int update_SPNG(UPDATE_FUNC_ARGS) {
 				if (x+rx>=0 && y+ry>0 && x+rx<XRES && y+ry<YRES && (rx || ry))
 				{
 					r = pmap[y+ry][x+rx];
-					if (!r)
+					if ((r>>8)>=NPART || !r || parts[i].temp>374.0f)
 						continue;
 					if ((r&0xFF)==PT_WATR&&33>=rand()/(RAND_MAX/100)+1)
 					{
@@ -24,10 +24,15 @@ int update_SPNG(UPDATE_FUNC_ARGS) {
 				if (x+rx>=0 && y+ry>0 && x+rx<XRES && y+ry<YRES && (rx || ry))
 				{
 					r = pmap[y+ry][x+rx];
+					if ((r>>8)>=NPART)
+						continue;
+					if ((bmap[(y+ry)/CELL][(x+rx)/CELL]==WL_WALLELEC||bmap[(y+ry)/CELL][(x+rx)/CELL]==WL_EWALL||bmap[(y+ry)/CELL][(x+rx)/CELL]==WL_DESTROYALL||bmap[(y+ry)/CELL][(x+rx)/CELL]==WL_WALL||
+					        bmap[(y+ry)/CELL][(x+rx)/CELL]==WL_ALLOWAIR||bmap[(y+ry)/CELL][(x+rx)/CELL]==WL_ALLOWSOLID||bmap[(y+ry)/CELL][(x+rx)/CELL]==WL_ALLOWGAS))
+						continue;
 					if ((!r)&&parts[i].life>=1)//if nothing then create water
 					{
-						np = create_part(-1,x+rx,y+ry,PT_WATR);
-						if (np>-1) parts[i].life--;
+						create_part(-1,x+rx,y+ry,PT_WATR);
+						parts[i].life--;
 					}
 				}
 	for ( trade = 0; trade<9; trade ++)
@@ -37,7 +42,7 @@ int update_SPNG(UPDATE_FUNC_ARGS) {
 		if (x+rx>=0 && y+ry>0 && x+rx<XRES && y+ry<YRES && (rx || ry))
 		{
 			r = pmap[y+ry][x+rx];
-			if (!r)
+			if ((r>>8)>=NPART || !r)
 				continue;
 			if ((r&0xFF)==PT_SPNG&&(parts[i].life>parts[r>>8].life)&&parts[i].life>0)//diffusion
 			{
@@ -65,7 +70,7 @@ int update_SPNG(UPDATE_FUNC_ARGS) {
 				if (x+rx>=0 && y+ry>0 && x+rx<XRES && y+ry<YRES && (rx || ry))
 				{
 					r = pmap[y+ry][x+rx];
-					if (!r)
+					if ((r>>8)>=NPART || !r)
 						continue;
 					if ((r&0xFF)==PT_FIRE)
 					{
@@ -87,6 +92,10 @@ int update_SPNG(UPDATE_FUNC_ARGS) {
 				if (x+rx>=0 && y+ry>0 && x+rx<XRES && y+ry<YRES && (rx || ry))
 				{
 					r = pmap[y+ry][x+rx];
+					if ((r>>8)>=NPART)
+						continue;
+					if ((bmap[(y+ry)/CELL][(x+rx)/CELL]==WL_WALLELEC||bmap[(y+ry)/CELL][(x+rx)/CELL]==WL_ALLOWLIQUID||bmap[(y+ry)/CELL][(x+rx)/CELL]==WL_DESTROYALL||bmap[(y+ry)/CELL][(x+rx)/CELL]==WL_WALL||bmap[(y+ry)/CELL][(x+rx)/CELL]==WL_ALLOWSOLID))
+						continue;
 					if ((!r)&&parts[i].life>=1)//if nothing then create steam
 					{
 						np = create_part(-1,x+rx,y+ry,PT_WTRV);
@@ -94,9 +103,9 @@ int update_SPNG(UPDATE_FUNC_ARGS) {
 						{
 							parts[np].temp = parts[i].temp;
 							tmp--;
-							parts[i].life--;
-							parts[i].temp -= 20.0f;
 						}
+						parts[i].life--;
+						parts[i].temp -= 20.0f;
 					}
 				}
 	if (tmp>0)

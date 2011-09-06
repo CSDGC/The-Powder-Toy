@@ -25,7 +25,7 @@ void pushParticle(int i, int count, int original)
 			if (x+rx>=0 && y+ry>=0 && x+rx<XRES && y+ry<YRES)
 			{
 				r = pmap[y+ry][x+rx];
-				if (!r)
+				if ((r>>8)>=NPART || !r)
 					continue;
 				else if ((r&0xFF)==PT_PIPE && parts[r>>8].ctype!=notctype && (parts[r>>8].tmp&0xFF)==0)
 				{
@@ -47,7 +47,7 @@ void pushParticle(int i, int count, int original)
 	{
 		int coords = 7 - (parts[i].tmp>>10);
 		r = pmap[y+ pos_1_ry[coords]][x+ pos_1_rx[coords]];
-		if (!r)
+		if ((r>>8)>=NPART || !r)
 		{
 		}
 		else if ((r&0xFF)==PT_PIPE && parts[r>>8].ctype!=notctype && (parts[r>>8].tmp&0xFF)==0)
@@ -85,7 +85,7 @@ int update_PIPE(UPDATE_FUNC_ARGS) {
 					if (x+rx>=0 && y+ry>0 && x+rx<XRES && y+ry<YRES && (rx || ry))
 					{
 						r = pmap[y+ry][x+rx];
-						if (!r)
+						if ((r>>8)>=NPART || !r)
 							continue;
 						if ((r&0xFF)==PT_PIPE&&parts[r>>8].ctype==1)
 						{
@@ -130,6 +130,8 @@ int update_PIPE(UPDATE_FUNC_ARGS) {
 				if (x+rx>=0 && y+ry>=0 && x+rx<XRES && y+ry<YRES)
 				{
 					r = pmap[y+ry][x+rx];
+					if ((r>>8)>=NPART)
+						return 0;
 					if (surround_space && !r && (parts[i].tmp&0xFF)!=0)  //creating at end
 					{
 						np = create_part(-1,x+rx,y+ry,parts[i].tmp&0xFF);
@@ -139,8 +141,8 @@ int update_PIPE(UPDATE_FUNC_ARGS) {
 							parts[np].life = parts[i].flags;
 							parts[np].tmp = parts[i].pavg[0];
 							parts[np].ctype = parts[i].pavg[1];
-							parts[i].tmp &= ~0xFF;
 						}
+						parts[i].tmp &= ~0xFF;
 					}
 					//try eating particle at entrance
 					else if ((parts[i].tmp&0xFF) == 0 && (ptypes[r&0xFF].falldown!= 0 || ptypes[r&0xFF].state == ST_GAS))
@@ -151,16 +153,6 @@ int update_PIPE(UPDATE_FUNC_ARGS) {
 						parts[i].pavg[0] = parts[r>>8].tmp;
 						parts[i].pavg[1] = parts[r>>8].ctype;
 						kill_part(r>>8);
-					}
-					else if ((parts[i].tmp&0xFF) == 0 && (r&0xFF)==PT_STOR && parts[r>>8].tmp && (ptypes[parts[r>>8].tmp].falldown!= 0 || ptypes[parts[r>>8].tmp].state == ST_GAS))
-					{
-						parts[i].tmp =  parts[r>>8].tmp;
-						parts[i].temp = parts[r>>8].temp;
-						parts[i].flags = parts[r>>8].flags;
-						parts[i].pavg[0] = parts[r>>8].pavg[0];
-						parts[i].pavg[1] = parts[r>>8].pavg[1];
-						parts[r>>8].tmp = 0;
-						parts[r>>8].life = 0;
 					}
 				}
 			}

@@ -30,8 +30,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <math.h>
-#include <SDL/SDL.h>
-#include <SDL/SDL_audio.h>
+#include <SDL.h>
+#include <SDL_audio.h>
 #include <bzlib.h>
 #include <time.h>
 #include <pthread.h>
@@ -56,7 +56,7 @@
 #include <icon.h>
 #include <console.h>
 #ifdef PYCONSOLE
-#include "pythonconsole.h"
+#include "pyconsole.h"
 #endif
 #ifdef LUACONSOLE
 #include "luaconsole.h"
@@ -151,9 +151,9 @@ static const char *it_msg =
     "The spacebar can be used to pause physics.\n"
     "'P' will take a screenshot and save it into the current directory.\n"
     "\n"
-    "Contributors: \bgStanislaw K Skowronek (\brhttp://powder.unaligned.org\bg, \bbirc.unaligned.org #wtf\bg),\n"
-    "\bgSimon Robertshaw, Skresanov Savely, cracker64, Catelite, Bryan Hoyle, Nathan Cousins, jacksonmj,\n"
-	"\bgLieuwe Mosch, Anthony Boot, Matthew Miller\n"
+    "\bgCopyright (c) 2008-11 Stanislaw K Skowronek (\brhttp://powder.unaligned.org\bg, \bbirc.unaligned.org #wtf\bg)\n"
+    "\bgCopyright (c) 2010-11 Simon Robertshaw, Skresanov Savely, cracker64, Bryan Hoyle, Nathan Cousins, jacksonmj,\n"
+	"                      Lieuwe Mosch\n"
     "\n"
     "\bgTo use online features such as saving, you need to register at: \brhttp://powdertoy.co.uk/Register.html"
     ;
@@ -177,6 +177,7 @@ int sys_shortcuts = 1;
 int legacy_enable = 0; //Used to disable new features such as heat, will be set by save.
 int ngrav_enable = 0; //Newtonian gravity, will be set by save
 int aheat_enable; //Ambient heat
+int oxy_enable;
 int decorations_enable = 1;
 int hud_enable = 1;
 int active_menu = 0;
@@ -188,7 +189,6 @@ int frameidx = 0;
 //int CGOL = 0;
 //int GSPEED = 1;//causes my .exe to crash..
 int sound_enable = 0;
-int debug_flags = 0;
 
 
 sign signs[MAXSIGNS];
@@ -326,14 +326,12 @@ void *build_thumb(int *size, int bzip2)
 }
 
 //the saving function
-void *build_save(int *size, int orig_x0, int orig_y0, int orig_w, int orig_h, unsigned char bmap[YRES/CELL][XRES/CELL], float fvx[YRES/CELL][XRES/CELL], float fvy[YRES/CELL][XRES/CELL], sign signs[MAXSIGNS], void* partsptr)
+void *build_save(int *size, int x0, int y0, int w, int h, unsigned char bmap[YRES/CELL][XRES/CELL], float fvx[YRES/CELL][XRES/CELL], float fvy[YRES/CELL][XRES/CELL], sign signs[MAXSIGNS], void* partsptr)
 {
 	unsigned char *d=calloc(1,3*(XRES/CELL)*(YRES/CELL)+(XRES*YRES)*15+MAXSIGNS*262), *c;
 	int i,j,x,y,p=0,*m=calloc(XRES*YRES, sizeof(int));
-	int x0, y0, w, h, bx0=orig_x0/CELL, by0=orig_y0/CELL, bw, bh;
+	int bx0=x0/CELL, by0=y0/CELL, bw=(w+CELL-1)/CELL, bh=(h+CELL-1)/CELL;
 	particle *parts = partsptr;
-	bw=(orig_w+orig_x0-bx0*CELL+CELL-1)/CELL;
-	bh=(orig_h+orig_y0-by0*CELL+CELL-1)/CELL;
 
 	// normalize coordinates
 	x0 = bx0*CELL;
@@ -370,7 +368,7 @@ void *build_save(int *size, int orig_x0, int orig_y0, int orig_w, int orig_h, un
 		{
 			x = (int)(parts[i].x+0.5f);
 			y = (int)(parts[i].y+0.5f);
-			if (x>=orig_x0 && x<orig_x0+orig_w && y>=orig_y0 && y<orig_y0+orig_h) {
+			if (x>=x0 && x<x0+w && y>=y0 && y<y0+h) {
 				if (!m[(x-x0)+(y-y0)*w] ||
 				        parts[m[(x-x0)+(y-y0)*w]-1].type == PT_PHOT ||
 				        parts[m[(x-x0)+(y-y0)*w]-1].type == PT_NEUT)
@@ -479,7 +477,7 @@ void *build_save(int *size, int orig_x0, int orig_y0, int orig_w, int orig_h, un
 	for (j=0; j<w*h; j++)
 	{
 		i = m[j];
-		if (i && (parts[i-1].type==PT_CLNE || parts[i-1].type==PT_PCLN || parts[i-1].type==PT_BCLN || parts[i-1].type==PT_SPRK || parts[i-1].type==PT_LAVA || parts[i-1].type==PT_PIPE || parts[i-1].type==PT_LIFE || parts[i-1].type==PT_PBCN || parts[i-1].type==PT_WIRE || parts[i-1].type==PT_STOR || parts[i-1].type==PT_CONV))
+		if (i && (parts[i-1].type==PT_CLNE || parts[i-1].type==PT_PCLN || parts[i-1].type==PT_BCLN || parts[i-1].type==PT_SPRK || parts[i-1].type==PT_LAVA || parts[i-1].type==PT_PIPE || parts[i-1].type==PT_LIFE || parts[i-1].type==PT_PBCN))
 			d[p++] = parts[i-1].ctype;
 	}
 
@@ -549,7 +547,6 @@ int parse_save(void *save, int size, int replace, int x0, int y0, unsigned char 
 	int nf=0, new_format = 0, ttv = 0;
 	particle *parts = partsptr;
 	int *fp = malloc(NPART*sizeof(int));
-	parts_lastActiveIndex = NPART-1;
 
 	//New file header uses PSv, replacing fuC. This is to detect if the client uses a new save format for temperatures
 	//This creates a problem for old clients, that display and "corrupt" error instead of a "newer version" error
@@ -581,7 +578,7 @@ int parse_save(void *save, int size, int replace, int x0, int y0, unsigned char 
 				airMode = ((c[3]>>4)&0x07);// | ((c[3]>>4)&0x02) | ((c[3]>>4)&0x01);
 			}
 			if (ver>=49 && replace) {
-				tempGrav = ((c[3]>>7)&0x01);		
+				tempGrav = ((c[3]>>7)&0x01);
 			}
 		} else {
 			if (c[3]==1||c[3]==0) {
@@ -716,9 +713,9 @@ int parse_save(void *save, int size, int replace, int x0, int y0, unsigned char 
 				j = PT_DUST;//goto corrupt;
 			}
 			gol[x][y]=0;
-			if (j)
+			if (j)// && !(player[27] == 1 && j==PT_STKM))
 			{
-				if (pmap[y][x])
+				if (pmap[y][x] && (pmap[y][x]>>8)<NPART)
 				{
 					k = pmap[y][x]>>8;
 					memset(parts+k, 0, sizeof(particle));
@@ -766,6 +763,59 @@ int parse_save(void *save, int size, int replace, int x0, int y0, unsigned char 
 			{
 				parts[i].vx = (d[p++]-127.0f)/16.0f;
 				parts[i].vy = (d[p++]-127.0f)/16.0f;
+				if (parts[i].type == PT_STKM)
+				{
+					//player[2] = PT_DUST;
+
+					player[3] = parts[i].x-1;  //Setting legs positions
+					player[4] = parts[i].y+6;
+					player[5] = parts[i].x-1;
+					player[6] = parts[i].y+6;
+
+					player[7] = parts[i].x-3;
+					player[8] = parts[i].y+12;
+					player[9] = parts[i].x-3;
+					player[10] = parts[i].y+12;
+
+					player[11] = parts[i].x+1;
+					player[12] = parts[i].y+6;
+					player[13] = parts[i].x+1;
+					player[14] = parts[i].y+6;
+
+					player[15] = parts[i].x+3;
+					player[16] = parts[i].y+12;
+					player[17] = parts[i].x+3;
+					player[18] = parts[i].y+12;
+
+					player[27] = 1;
+
+				}
+				if (parts[i].type == PT_STKM2)
+				{
+					//player[2] = PT_DUST;
+
+					player2[3] = parts[i].x-1;  //Setting legs positions
+					player2[4] = parts[i].y+6;
+					player2[5] = parts[i].x-1;
+					player2[6] = parts[i].y+6;
+
+					player2[7] = parts[i].x-3;
+					player2[8] = parts[i].y+12;
+					player2[9] = parts[i].x-3;
+					player2[10] = parts[i].y+12;
+
+					player2[11] = parts[i].x+1;
+					player2[12] = parts[i].y+6;
+					player2[13] = parts[i].x+1;
+					player2[14] = parts[i].y+6;
+
+					player2[15] = parts[i].x+3;
+					player2[16] = parts[i].y+12;
+					player2[17] = parts[i].x+3;
+					player2[18] = parts[i].y+12;
+
+					player2[27] = 1;
+				}
 			}
 			else
 				p += 2;
@@ -957,13 +1007,13 @@ int parse_save(void *save, int size, int replace, int x0, int y0, unsigned char 
 				parts[i-1].temp = ptypes[parts[i-1].type].heat;
 			}
 		}
-	} 
+	}
 	for (j=0; j<w*h; j++)
 	{
 		int gnum = 0;
 		i = m[j];
 		ty = d[pty+j];
-		if (i && (ty==PT_CLNE || (ty==PT_PCLN && ver>=43) || (ty==PT_BCLN && ver>=44) || (ty==PT_SPRK && ver>=21) || (ty==PT_LAVA && ver>=34) || (ty==PT_PIPE && ver>=43) || (ty==PT_LIFE && ver>=51) || (ty==PT_PBCN && ver>=52) || (ty==PT_WIRE && ver>=55) || (ty==PT_STOR && ver>=59) || (ty==PT_CONV && ver>=60)))
+		if (i && (ty==PT_CLNE || (ty==PT_PCLN && ver>=43) || (ty==PT_BCLN && ver>=44) || (ty==PT_SPRK && ver>=21) || (ty==PT_LAVA && ver>=34) || (ty==PT_PIPE && ver>=43) || (ty==PT_LIFE && ver>=51) || (ty==PT_PBCN && ver>=52)))
 		{
 			if (p >= size)
 				goto corrupt;
@@ -975,23 +1025,6 @@ int parse_save(void *save, int size, int replace, int x0, int y0, unsigned char 
 		// no more particle properties to load, so we can change type here without messing up loading
 		if (i && i<=NPART)
 		{
-			if ((player[27] == 1 && ty==PT_STKM) || (player2[27] == 1 && ty==PT_STKM2))
-			{
-				parts[i-1].type = PT_NONE;
-			}
-			else if (parts[i-1].type == PT_STKM)
-			{
-				//player[2] = PT_DUST;
-				STKM_init_legs(player, i-1);
-				player[27] = 1;
-			}
-			else if (parts[i-1].type == PT_STKM2)
-			{
-				//player2[2] = PT_DUST;
-				STKM_init_legs(player2, i-1);
-				player2[27] = 1;
-			}
-
 			if (ver<48 && (ty==OLD_PT_WIND || (ty==PT_BRAY&&parts[i-1].life==0)))
 			{
 				// Replace invisible particles with something sensible and add decoration to hide it
@@ -1034,7 +1067,7 @@ int parse_save(void *save, int size, int replace, int x0, int y0, unsigned char 
 			stop_grav_async();
 	}
 	#endif
-	
+
 	gravity_mask();
 
 	if (p >= size)
@@ -1097,7 +1130,6 @@ void clear_sim(void)
 	memset(signs, 0, sizeof(signs));
 	memset(parts, 0, sizeof(particle)*NPART);
 	pfree = -1;
-	parts_lastActiveIndex = NPART-1;
 	memset(pmap, 0, sizeof(pmap));
 	memset(pv, 0, sizeof(pv));
 	memset(vx, 0, sizeof(vx));
@@ -1410,7 +1442,7 @@ int set_scale(int scale, int kiosk){
 	}
 	return 1;
 }
-				
+
 void* update_grav_async(void* unused)
 {
 	int done = 0;
@@ -1427,18 +1459,18 @@ void* update_grav_async(void* unused)
 			update_grav();
 			done = 1;
 			pthread_mutex_lock(&gravmutex);
-			
+
 			grav_ready = done;
 			thread_done = gravthread_done;
-			
+
 			pthread_mutex_unlock(&gravmutex);
 		} else {
 			pthread_mutex_lock(&gravmutex);
 			pthread_cond_wait(&gravcv, &gravmutex);
-		    
+
 			done = grav_ready;
 			thread_done = gravthread_done;
-			
+
 			pthread_mutex_unlock(&gravmutex);
 		}
 	}
@@ -1480,7 +1512,7 @@ int main(int argc, char *argv[])
 	unsigned char c[3];
 	char ppmfilename[256], ptifilename[256], ptismallfilename[256];
 	FILE *f;
-	
+
 	cmode = CM_FIRE;
 	sys_pause = 1;
 	parts = calloc(sizeof(particle), NPART);
@@ -1491,19 +1523,19 @@ int main(int argc, char *argv[])
 
 	pers_bg = calloc((XRES+BARSIZE)*YRES, PIXELSIZE);
 	fire_bg = calloc(XRES*YRES, PIXELSIZE);
-	
-	prepare_alpha(4, 1.0f);
+
+	prepare_alpha();
 	player[2] = player2[2] = PT_DUST;
 
 	sprintf(ppmfilename, "%s.ppm", argv[2]);
 	sprintf(ptifilename, "%s.pti", argv[2]);
 	sprintf(ptismallfilename, "%s-small.pti", argv[2]);
-	
+
 	if(load_data && load_size){
 		int parsestate = 0;
 		//parsestate = parse_save(load_data, load_size, 1, 0, 0);
 		parsestate = parse_save(load_data, load_size, 1, 0, 0, bmap, fvx, fvy, signs, parts, pmap);
-		
+
 		for(i=0; i<30; i++){
 			memset(vid_buf, 0, (XRES+BARSIZE)*YRES*PIXELSIZE);
 			draw_walls(vid_buf);
@@ -1511,9 +1543,9 @@ int main(int argc, char *argv[])
 			draw_parts(vid_buf);
 			render_fire(vid_buf);
 		}
-		
+
 		render_signs(vid_buf);
-		
+
 		if(parsestate>0){
 			//return 0;
 			info_box(vid_buf, "Save file invalid or from newer version");
@@ -1555,16 +1587,15 @@ int main(int argc, char *argv[])
 			vid_buf+=XRES+BARSIZE;
 		}
 		fclose(f);
-		
+
 		return 1;
 	}
-	
+
 	return 0;
 }
 #else
 int main(int argc, char *argv[])
 {
-	limitFPS = 60;
 	pixel *part_vbuf; //Extra video buffer
 	pixel *part_vbuf_store;
 #ifdef BETA
@@ -1574,11 +1605,11 @@ int main(int argc, char *argv[])
 	char heattext[256] = "";
 	char coordtext[128] = "";
 	int currentTime = 0;
-	int FPS = 0, pastFPS = 0, elapsedTime = 0; 
+	int FPS = 0, pastFPS = 0, elapsedTime = 0, limitFPS = 60;
 	void *http_ver_check, *http_session_check = NULL;
 	char *ver_data=NULL, *check_data=NULL, *tmp;
 	//char console_error[255] = "";
-	int result, i, j, bq, bc, fire_fc=0, do_check=0, do_s_check=0, old_version=0, http_ret=0,http_s_ret=0, major, minor, old_ver_len, new_message_len=0;
+	int result, i, j, bq, fire_fc=0, do_check=0, do_s_check=0, old_version=0, http_ret=0,http_s_ret=0, major, minor, old_ver_len, new_message_len=0;
 #ifdef INTERNAL
 	int vs = 0;
 #endif
@@ -1593,6 +1624,10 @@ int main(int argc, char *argv[])
 	unsigned int hsvSave = PIXRGB(0,255,127);//this is hsv format
 	SDL_AudioSpec fmt;
 	int username_flash = 0, username_flash_t = 1;
+#ifdef PYCONSOLE
+	PyObject *pname,*pmodule,*pfunc,*pvalue,*pargs,*pstep,*pkey;
+	PyObject *tpt_console_obj;
+#endif
 #ifdef PTW32_STATIC_LIB
     pthread_win32_process_attach_np();
     pthread_win32_thread_attach_np();
@@ -1624,7 +1659,69 @@ int main(int argc, char *argv[])
 	luacon_open();
 #endif
 #ifdef PYCONSOLE
-	pycon_open();
+	//initialise python console
+	Py_Initialize();
+	PyRun_SimpleString("print 'python present.'");
+	Py_InitModule("tpt", EmbMethods);
+
+	//change the path to find all the correct modules
+	PyRun_SimpleString("import sys\nsys.path.append('./tptPython.zip')\nsys.path.append('.')");
+	//load the console module and whatnot
+#ifdef PYEXT
+	PyRun_SimpleString(tpt_console_py);
+	printf("using external python console file.\n");
+	pname=PyString_FromString("tpt_console");//create string object
+	pmodule = PyImport_Import(pname);//import module
+	Py_DECREF(pname);//throw away string
+#else
+	tpt_console_obj = PyMarshal_ReadObjectFromString(tpt_console_pyc+8, sizeof(tpt_console_pyc)-8);
+	pmodule=PyImport_ExecCodeModule("tpt_console", tpt_console_obj);
+#endif
+	if (pmodule!=NULL)
+	{
+		pfunc=PyObject_GetAttrString(pmodule,"handle");//get the handler function
+		if (pfunc && PyCallable_Check(pfunc))//check if it's really a function
+		{
+			printf("python console ready to go.\n");
+		}
+		else
+		{
+			PyErr_Print();
+			printf("unable to find handle function, mangled console.py?\n");
+			pyready = 0;
+			pygood = 0;
+		}
+
+		pstep=PyObject_GetAttrString(pmodule,"step");//get the handler function
+		if (pstep && PyCallable_Check(pstep))//check if it's really a function
+		{
+			printf("step function found.\n");
+		}
+		else
+		{
+			printf("unable to find step function. ignoring.\n");
+		}
+
+		pkey=PyObject_GetAttrString(pmodule,"keypress");//get the handler function
+		if (pstep && PyCallable_Check(pkey))//check if it's really a function
+		{
+			printf("key function found.\n");
+		}
+		else
+		{
+			printf("unable to find key function. ignoring.\n");
+		}
+	}
+	else
+	{
+		//sys.stderr
+		PyErr_Print();
+		printf("unable to find console module, missing file or mangled console.py?\n");
+		pyready = 0;
+		pygood = 0;
+	}
+#else
+	printf("python console disabled at compile time.\n");
 #endif
 
 #ifdef MT
@@ -1699,37 +1796,21 @@ int main(int argc, char *argv[])
 			file_data = file_load(argv[i+1], &size);
 			if (file_data)
 			{
-				svf_last = file_data;
-				svf_lsize = size;
-				if(!parse_save(file_data, size, 1, 0, 0, bmap, fvx, fvy, signs, parts, pmap))
-				{
-					it=0;
-					svf_filename[0] = 0;
-					svf_fileopen = 1;
-				} else {
-					svf_last = NULL;
-					svf_lsize = 0;
-					free(file_data);
-					file_data = NULL;
-				}
+				it=0;
+				parse_save(file_data, size, 0, 0, 0, bmap, fvx, fvy, signs, parts, pmap);
 			}
-			i++;
 		}
 
 	}
 
+	save_presets(0);
+
 	make_kernel();
-	prepare_alpha(CELL, 1.0f);
+	prepare_alpha();
 
 	stamp_init();
 
-	if (!sdl_open())
-	{
-		sdl_scale = 1;
-		kiosk_enable = 0;
-		if (!sdl_open()) exit(1);
-	}
-	save_presets(0);
+	if (!sdl_open()) exit(1);
 	http_init(http_proxy_string[0] ? http_proxy_string : NULL);
 
 	if (cpu_check())
@@ -1738,7 +1819,11 @@ int main(int argc, char *argv[])
 		return 1;
 	}
 
+#ifdef BETA
 	http_ver_check = http_async_req_start(NULL, "http://" SERVER "/Update.api?Action=CheckVersion", NULL, 0, 0);
+#else
+	http_ver_check = http_async_req_start(NULL, "http://" SERVER "/Update.api?Action=CheckVersion", NULL, 0, 0);
+#endif
 	if (svf_login) {
 		http_session_check = http_async_req_start(NULL, "http://" SERVER "/Login.api?Action=CheckSession", NULL, 0, 0);
 		http_auth_headers(http_session_check, svf_user_id, NULL, svf_session_id);
@@ -1760,7 +1845,7 @@ int main(int argc, char *argv[])
 		ClearScreen();
 #else
 
-		if(ngrav_enable && cmode==CM_FANCY)
+		if(cmode==CM_FANCY)
 		{
 			part_vbuf = part_vbuf_store;
 			memset(vid_buf, 0, (XRES+BARSIZE)*YRES*PIXELSIZE);
@@ -1798,7 +1883,7 @@ int main(int argc, char *argv[])
 			bsy = 1180;
 		if (bsy<0)
 			bsy = 0;
-		
+
 		if(ngrav_enable && drawgrav_enable)
 			draw_grav(vid_buf);
 		draw_walls(part_vbuf);
@@ -1806,7 +1891,7 @@ int main(int argc, char *argv[])
 		draw_parts(part_vbuf); //draw particles
 		if(sl == WL_GRAV+100 || sr == WL_GRAV+100)
 			draw_grav_zones(part_vbuf);
-		
+
 		if(ngrav_enable){
 			pthread_mutex_lock(&gravmutex);
 			result = grav_ready;
@@ -1867,18 +1952,13 @@ int main(int argc, char *argv[])
 
 		render_signs(part_vbuf);
 
-		if(ngrav_enable && cmode==CM_FANCY)
+		if(cmode==CM_FANCY)
 			render_gravlensing(part_vbuf, vid_buf);
 
 		memset(vid_buf+((XRES+BARSIZE)*YRES), 0, (PIXELSIZE*(XRES+BARSIZE))*MENUSIZE);//clear menu areas
 		clearrect(vid_buf, XRES-1, 0, BARSIZE+1, YRES);
 
 		draw_svf_ui(vid_buf, sdl_mod & (KMOD_LCTRL|KMOD_RCTRL));
-		
-		if(debug_flags)
-		{
-			draw_debug_info(vid_buf, lm, lx, ly, x, y, line_x, line_y);
-		}
 
 		if (http_ver_check)
 		{
@@ -2009,17 +2089,8 @@ int main(int argc, char *argv[])
 		}
 #ifdef LUACONSOLE
 	if(sdl_key){
-		if(!luacon_keyevent(sdl_key, sdl_mod, LUACON_KDOWN))
+		if(!luacon_keypress(sdl_key, sdl_mod))
 			sdl_key = 0;
-	}
-	if(sdl_rkey){
-		if(!luacon_keyevent(sdl_rkey, sdl_mod, LUACON_KUP))
-			sdl_rkey = 0;
-	}
-#endif
-#ifdef PYCONSOLE
-	if(sdl_key){
-		pycon_keypress(sdl_key, sdl_mod);
 	}
 #endif
 		if (sys_shortcuts==1)//all shortcuts can be disabled by python scripts
@@ -2135,7 +2206,7 @@ int main(int argc, char *argv[])
 				CURRENT_BRUSH =(CURRENT_BRUSH + 1)%BRUSH_NUM ;
 			}
 			if (sdl_key==SDLK_LEFTBRACKET) {
-				if (sdl_zoom_trig)
+				if (sdl_zoom_trig==1)
 				{
 					ZSIZE -= 1;
 					if (ZSIZE>60)
@@ -2175,7 +2246,7 @@ int main(int argc, char *argv[])
 				}
 			}
 			if (sdl_key==SDLK_RIGHTBRACKET) {
-				if (sdl_zoom_trig)
+				if (sdl_zoom_trig==1)
 				{
 					ZSIZE += 1;
 					if (ZSIZE>60)
@@ -2432,7 +2503,6 @@ int main(int argc, char *argv[])
 
 				for (cbi=0; cbi<NPART; cbi++)
 					parts[cbi] = cb_parts[cbi];
-				parts_lastActiveIndex = NPART-1;
 
 				for (cby = 0; cby<YRES; cby++)
 					for (cbx = 0; cbx<XRES; cbx++)
@@ -2450,6 +2520,19 @@ int main(int argc, char *argv[])
 					}
 			}
 		}
+#ifdef PYCONSOLE
+		if (pyready==1 && pygood==1)
+			if (pkey!=NULL && sdl_key!=NULL)
+			{
+				pargs=Py_BuildValue("(c)",sdl_key);
+				pvalue = PyObject_CallObject(pkey, pargs);
+				Py_DECREF(pargs);
+				pargs=NULL;
+				if (pvalue==NULL)
+					strcpy(console_error,"failed to execute key code.");
+				pvalue=NULL;
+			}
+#endif
 #ifdef INTERNAL
 		int counterthing;
 		if (sdl_key=='v'&&!(sdl_mod & (KMOD_LCTRL|KMOD_RCTRL)))//frame capture
@@ -2482,7 +2565,7 @@ int main(int argc, char *argv[])
 
 		if (sdl_wheel)
 		{
-			if (sdl_zoom_trig)//zoom window change
+			if (sdl_zoom_trig==1)//zoom window change
 			{
 				ZSIZE += sdl_wheel;
 				if (ZSIZE>60)
@@ -2526,21 +2609,11 @@ int main(int argc, char *argv[])
 		}
 
 		bq = b; // bq is previous mouse state
-		bc = b = SDL_GetMouseState(&x, &y); // b is current mouse state
+		b = SDL_GetMouseState(&x, &y); // b is current mouse state
 
 #ifdef LUACONSOLE
-		if(bc && bq){
-			if(!luacon_mouseevent(x/sdl_scale, y/sdl_scale, bc, LUACON_MPRESS)){
-				b = 0;
-			}
-		}
-		else if(bc && !bq){
-			if(!luacon_mouseevent(x/sdl_scale, y/sdl_scale, bc, LUACON_MDOWN)){
-				b = 0;
-			}
-		}
-		else if(!bc && bq){
-			if(!luacon_mouseevent(x/sdl_scale, y/sdl_scale, bq, LUACON_MUP)){
+		if(b){
+			if(!luacon_mouseclick(x/sdl_scale, y/sdl_scale, b, bq)){
 				b = 0;
 			}
 		}
@@ -2576,28 +2649,19 @@ int main(int argc, char *argv[])
 			} else {
 				cr = pmap[y/sdl_scale][x/sdl_scale];
 			}
-			if (cr)
+			if (!((cr>>8)>=NPART || !cr))
 			{
 				if ((cr&0xFF)==PT_LIFE && parts[cr>>8].ctype>=0 && parts[cr>>8].ctype<NGOLALT)
 				{
 					sprintf(nametext, "%s (%s)", ptypes[cr&0xFF].name, gmenu[parts[cr>>8].ctype].name);
-				}
-				else if ((cr&0xFF)==PT_LAVA && parts[cr>>8].ctype > 0 && parts[cr>>8].ctype < PT_NUM )
-				{
-					char lowername[6];
-					strcpy(lowername, ptypes[parts[cr>>8].ctype].name);
-					int ix;
-					for (ix = 0; lowername[ix]; ix++)
-						lowername[ix] = tolower(lowername[ix]);
-
-					sprintf(nametext, "Molten %s", lowername);
 				}
 				else if (DEBUG_MODE)
 				{
 					int tctype = parts[cr>>8].ctype;
 					if ((cr&0xFF)==PT_PIPE)
 					{
-						tctype = parts[cr>>8].tmp&0xFF;
+						if (parts[cr>>8].tmp<PT_NUM) tctype = parts[cr>>8].tmp;
+						else tctype = 0;
 					}
 					if (tctype>=PT_NUM || tctype<0 || (cr&0xFF)==PT_PHOT)
 						tctype = 0;
@@ -2798,7 +2862,7 @@ int main(int argc, char *argv[])
 
 		if (dae > 0) //Fade away selected elements
 			dae --;
-		
+
 		if (!sdl_zoom_trig && zoom_en==1)
 			zoom_en = 0;
 
@@ -2829,10 +2893,10 @@ int main(int argc, char *argv[])
 		}
 		else if (save_mode==1)//getting the area you are selecting
 		{
-			save_x = mx/sdl_scale;
-			save_y = my/sdl_scale;
-			if (save_x >= XRES) save_x = XRES-1;
-			if (save_y >= YRES) save_y = YRES-1;
+			save_x = (mx/sdl_scale)/CELL;
+			save_y = (my/sdl_scale)/CELL;
+			if (save_x >= XRES/CELL) save_x = XRES/CELL-1;
+			if (save_y >= YRES/CELL) save_y = YRES/CELL-1;
 			save_w = 1;
 			save_h = 1;
 			if (b==1)
@@ -2847,32 +2911,32 @@ int main(int argc, char *argv[])
 		}
 		else if (save_mode==2)
 		{
-			save_w = mx/sdl_scale - save_x;
-			save_h = my/sdl_scale - save_y;
-			if (save_w+save_x>XRES) save_w = XRES-save_x;
-			if (save_h+save_y>YRES) save_h = YRES-save_y;
+			save_w = (mx/sdl_scale+CELL/2)/CELL - save_x;
+			save_h = (my/sdl_scale+CELL/2)/CELL - save_y;
+			if (save_w>XRES/CELL) save_w = XRES/CELL;
+			if (save_h>YRES/CELL) save_h = YRES/CELL;
 			if (save_w<1) save_w = 1;
 			if (save_h<1) save_h = 1;
 			if (!b)
 			{
 				if (copy_mode==1)//CTRL-C, copy
 				{
-					clipboard_data=build_save(&clipboard_length, save_x, save_y, save_w, save_h, bmap, fvx, fvy, signs, parts);
+					clipboard_data=build_save(&clipboard_length, save_x*CELL, save_y*CELL, save_w*CELL, save_h*CELL, bmap, fvx, fvy, signs, parts);
 					clipboard_ready = 1;
 					save_mode = 0;
 					copy_mode = 0;
 				}
 				else if (copy_mode==2)//CTRL-X, cut
 				{
-					clipboard_data=build_save(&clipboard_length, save_x, save_y, save_w, save_h, bmap, fvx, fvy, signs, parts);
+					clipboard_data=build_save(&clipboard_length, save_x*CELL, save_y*CELL, save_w*CELL, save_h*CELL, bmap, fvx, fvy, signs, parts);
 					clipboard_ready = 1;
 					save_mode = 0;
 					copy_mode = 0;
-					clear_area(save_x, save_y, save_w, save_h);
+					clear_area(save_x*CELL, save_y*CELL, save_w*CELL, save_h*CELL);
 				}
 				else//normal save
 				{
-					stamp_save(save_x, save_y, save_w, save_h);
+					stamp_save(save_x*CELL, save_y*CELL, save_w*CELL, save_h*CELL);
 					save_mode = 0;
 				}
 			}
@@ -2893,10 +2957,7 @@ int main(int argc, char *argv[])
 			zoom_wy = 0;
 			zoom_en = 1;
 			if (!b && bq)
-			{
 				zoom_en = 2;
-				sdl_zoom_trig = 0;
-			}
 		}
 		else if (b)//there is a click
 		{
@@ -2964,7 +3025,7 @@ int main(int argc, char *argv[])
 						if (x>=37 && x<=187)
 						{
 							save_filename_ui(vid_buf);
-									
+
 						}
 						if (x>=1 && x<=17)
 						{
@@ -3080,7 +3141,7 @@ int main(int argc, char *argv[])
 						{
 							nfvx = (line_x-lx)*0.005f;
 							nfvy = (line_y-ly)*0.005f;
-							flood_parts(lx, ly, WL_FANHELPER, -1, WL_FAN, 0);
+							flood_parts(lx, ly, WL_FANHELPER, -1, WL_FAN);
 							for (j=0; j<YRES/CELL; j++)
 								for (i=0; i<XRES/CELL; i++)
 									if (bmap[j][i] == WL_FANHELPER)
@@ -3122,7 +3183,7 @@ int main(int argc, char *argv[])
 						}
 						else
 						{
-							create_line(lx, ly, x, y, bsx, bsy, c, get_brush_flags());
+							create_line(lx, ly, x, y, bsx, bsy, c);
 						}
 						lx = x;
 						ly = y;
@@ -3151,10 +3212,10 @@ int main(int argc, char *argv[])
 					{
 						if (sdl_mod & (KMOD_CAPS))
 							c = 0;
-						if (c!=WL_STREAM+100&&c!=SPC_AIR&&c!=SPC_HEAT&&c!=SPC_COOL&&c!=SPC_VACUUM&&!REPLACE_MODE&&c!=SPC_WIND&&c!=SPC_PGRV&&c!=SPC_NGRV)
-							flood_parts(x, y, c, -1, -1, get_brush_flags());
+						if (c!=WL_STREAM+100&&c!=SPC_AIR&&c!=SPC_HEAT&&c!=SPC_COOL&&c!=SPC_VACUUM&&!REPLACE_MODE&&c!=SPC_WIND)
+							flood_parts(x, y, c, -1, -1);
 						if (c==SPC_HEAT || c==SPC_COOL)
-							create_parts(x, y, bsx, bsy, c, get_brush_flags());
+							create_parts(x, y, bsx, bsy, c);
 						lx = x;
 						ly = y;
 						lb = 0;
@@ -3167,9 +3228,9 @@ int main(int argc, char *argv[])
 						{
 							int cr;
 							cr = pmap[y][x];
-							if (!cr)
+							if ((cr>>8)>=NPART || !cr)
 								cr = photons[y][x];
-							if (cr)
+							if (!((cr>>8)>=NPART || !cr))
 							{
 								c = sl = cr&0xFF;
 								if (c==PT_LIFE)
@@ -3207,7 +3268,7 @@ int main(int argc, char *argv[])
 								cb_bmap[cby][cbx] = bmap[cby][cbx];
 								cb_emap[cby][cbx] = emap[cby][cbx];
 							}
-						create_parts(x, y, bsx, bsy, c, get_brush_flags());
+						create_parts(x, y, bsx, bsy, c);
 						lx = x;
 						ly = y;
 						lb = b;
@@ -3227,10 +3288,10 @@ int main(int argc, char *argv[])
 				if (lm == 1)//line
 				{
 					if (c!=WL_FAN+100 || lx<0 || ly<0 || lx>=XRES || ly>=YRES || bmap[ly/CELL][lx/CELL]!=WL_FAN)
-						create_line(lx, ly, line_x, line_y, bsx, bsy, c, get_brush_flags());
+						create_line(lx, ly, line_x, line_y, bsx, bsy, c);
 				}
 				else//box
-					create_box(lx, ly, x, y, c, get_brush_flags());
+					create_box(lx, ly, x, y, c);
 				lm = 0;
 			}
 			lb = 0;
@@ -3244,7 +3305,7 @@ int main(int argc, char *argv[])
 
 		if (save_mode)//draw dotted lines for selection
 		{
-			xor_rect(vid_buf, save_x, save_y, save_w, save_h);
+			xor_rect(vid_buf, save_x*CELL, save_y*CELL, save_w*CELL, save_h*CELL);
 			da = 51;//draws mouseover text for the message
 			db = 269;//the save message
 		}
@@ -3359,12 +3420,12 @@ int main(int argc, char *argv[])
 #endif
 			drawrect(vid_buf, XRES-19-old_ver_len, YRES-22, old_ver_len+5, 13, 255, 216, 32, 255);
 		}
-		
+
 		if (svf_messages)
 		{
 			sprintf(new_message_msg, "You have %d new message%s, Click to view", svf_messages, (svf_messages>1)?"s":"");
 			new_message_len = textwidth(new_message_msg);
-			
+
 			clearrect(vid_buf, XRES-21-new_message_len, YRES-39, new_message_len+9, 17);
 			drawtext(vid_buf, XRES-16-new_message_len, YRES-34, new_message_msg, 255, 186, 32, 255);
 			drawrect(vid_buf, XRES-19-new_message_len, YRES-37, new_message_len+5, 13, 255, 186, 32, 255);
@@ -3392,12 +3453,12 @@ int main(int argc, char *argv[])
 		if (hud_enable)
 		{
 #ifdef BETA
-			sprintf(uitext, "Version %d Beta %d FPS:%d Parts:%d Generation:%d Gravity:%d Air:%d", SAVE_VERSION, MINOR_VERSION, FPSB, NUM_PARTS, GENERATION, gravityMode, airMode);
+			sprintf(uitext, "cctvmod - The Engine Mod %d.%d\nVersion %d Beta %d FPS:%d Parts:%d Generation:%d Gravity:%d Air:%d",  ENGMOD1_VERSION, ENGMOD2_VERSION, SAVE_VERSION, MINOR_VERSION, FPSB, NUM_PARTS, GENERATION, gravityMode, airMode);
 #else
 			if (DEBUG_MODE)
-				sprintf(uitext, "Version %d.%d FPS:%d Parts:%d Generation:%d Gravity:%d Air:%d", SAVE_VERSION, MINOR_VERSION, FPSB, NUM_PARTS, GENERATION, gravityMode, airMode);
+				sprintf(uitext, "The Engine Mod v%d.%d\nVersion %d.%d FPS:%d Parts:%d Generation:%d Gravity:%d Air:%d", ENGMOD1_VERSION, ENGMOD2_VERSION, SAVE_VERSION, MINOR_VERSION, FPSB, NUM_PARTS, GENERATION, gravityMode, airMode);
 			else
-				sprintf(uitext, "Version %d.%d FPS:%d", SAVE_VERSION, MINOR_VERSION, FPSB);
+				sprintf(uitext, "The Engine Mod v%d.%d\nVersion %d.%d FPS:%d", ENGMOD1_VERSION, ENGMOD2_VERSION, SAVE_VERSION, MINOR_VERSION, FPSB);
 #endif
 			if (REPLACE_MODE)
 				strappend(uitext, " [REPLACE MODE]");
@@ -3466,7 +3527,7 @@ int main(int argc, char *argv[])
 				console = console_ui(vid_buf,console_error,console_more);
 				console = mystrdup(console);
 				strcpy(console_error,"");
-				if (process_command_py(vid_buf, console, console_error)==-1)
+				if (process_command(vid_buf, console, console_error,pfunc)==-1)
 				{
 					free(console);
 					break;
@@ -3524,7 +3585,19 @@ int main(int argc, char *argv[])
 
 		//execute python step hook
 #ifdef PYCONSOLE
-		pycon_step();
+		if (pyready==1 && pygood==1)
+			if (pstep!=NULL)
+			{
+				pargs=Py_BuildValue("()");
+				pvalue = PyObject_CallObject(pstep, pargs);
+				Py_DECREF(pargs);
+				pargs=NULL;
+				if (pvalue==NULL)
+					strcpy(console_error,"failed to execute step code.");
+				//Py_DECREF(pvalue);
+				//puts("a");
+				pvalue=NULL;
+			}
 #endif
 		sdl_blit(0, 0, XRES+BARSIZE, YRES+MENUSIZE, vid_buf, XRES+BARSIZE);
 
@@ -3553,7 +3626,12 @@ int main(int argc, char *argv[])
 	luacon_close();
 #endif
 #ifdef PYCONSOLE
-	pycon_close();
+
+	PyRun_SimpleString("import os,tempfile,os.path\ntry:\n    os.remove(os.path.join(tempfile.gettempdir(),'tpt_console.py'))\nexcept:\n    pass");
+	PyRun_SimpleString("import os,tempfile,os.path\ntry:\n    os.remove(os.path.join(tempfile.gettempdir(),'tpt_console.pyo'))\nexcept:\n    pass");
+	PyRun_SimpleString("import os,tempfile,os.path\ntry:\n    os.remove(os.path.join(tempfile.gettempdir(),'tpt_console.pyc'))\nexcept:\n    pass");
+
+	Py_Finalize();//cleanup any python stuff.
 #endif
 #ifdef PTW32_STATIC_LIB
     pthread_win32_thread_detach_np();

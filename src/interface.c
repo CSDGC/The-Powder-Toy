@@ -21,12 +21,9 @@
 #else
 #include <dirent.h>
 #endif
-#ifdef PYCONSOLE
-#include <pythonconsole.h>
-#endif
 
 SDLMod sdl_mod;
-int sdl_key, sdl_rkey, sdl_wheel, sdl_caps=0, sdl_ascii, sdl_zoom_trig=0;
+int sdl_key, sdl_wheel, sdl_caps=0, sdl_ascii, sdl_zoom_trig=0;
 #if (defined(LIN32) || defined(LIN64)) && defined(SDL_VIDEO_DRIVER_X11)
 SDL_SysWMinfo sdl_wminfo;
 Atom XA_CLIPBOARD, XA_TARGETS;
@@ -92,6 +89,7 @@ void menu_count(void)//puts the number of elements in each section into .itemcou
 	int i=0;
 	msections[SC_LIFE].itemcount = NGOLALT;
 	msections[SC_WALL].itemcount = UI_WALLCOUNT-4;
+	msections[SC_SPECIAL].itemcount = 4;
 	for (i=0; i<PT_NUM; i++)
 	{
 		msections[ptypes[i].menusection].itemcount+=ptypes[i].menu;
@@ -562,7 +560,7 @@ int markup_getregion(char *text, char *action, char *data, char *atext){
 	else
 	{
 		return 0;
-	}	
+	}
 }
 
 void ui_richtext_settext(char *text, ui_richtext *ed)
@@ -573,7 +571,7 @@ void ui_richtext_settext(char *text, ui_richtext *ed)
 	strcpy(ed->str, text);
 	//strcpy(ed->printstr, text);
 	for(action = 0; action < 6; action++){
-		ed->action[action] = 0;	
+		ed->action[action] = 0;
 		memset(ed->actiondata[action], 0, 256);
 		memset(ed->actiontext[action], 0, 256);
 	}
@@ -592,11 +590,11 @@ void ui_richtext_settext(char *text, ui_richtext *ed)
 				ppos+=strlen(ed->actiontext[action]);
 				ipos+=strlen(ed->actiontext[action]);
 				pos+=mulen;
-				action++;			
-			} 
+				action++;
+			}
 			else
 			{
-				pos++;			
+				pos++;
 			}
 		} else {
 			ed->printstr[ppos] = ed->str[pos];
@@ -604,7 +602,7 @@ void ui_richtext_settext(char *text, ui_richtext *ed)
 			pos++;
 			ipos++;
 			if(ed->str[pos] == '\b'){
-				ipos-=2;			
+				ipos-=2;
 			}
 		}
 	}
@@ -620,11 +618,11 @@ void ui_richtext_process(int mx, int my, int mb, int mbq, ui_richtext *ed)
 		currentpos = textwidthx(ed->printstr, mx-ed->x);
 		for(action = 0; action < 6; action++){
 			if(currentpos >= ed->regionss[action] && currentpos <= ed->regionsf[action])
-			{	
+			{
 				//Do action
 				if(ed->action[action]=='a'){
 					//Open link
-					open_link(ed->actiondata[action]);	
+					open_link(ed->actiondata[action]);
 				}
 				break;
 			}
@@ -853,7 +851,6 @@ void error_ui(pixel *vid_buf, int err, char *txt)
 	}
 }
 
-
 char *input_ui(pixel *vid_buf, char *title, char *prompt, char *text, char *shadow)
 {
 	int xsize = 244;
@@ -894,7 +891,7 @@ char *input_ui(pixel *vid_buf, char *title, char *prompt, char *text, char *shad
 		drawrect(vid_buf, x0, y0, xsize, ysize, 192, 192, 192, 255);
 		drawtext(vid_buf, x0+8, y0+8, title, 160, 160, 255, 255);
 		drawtext(vid_buf, x0+8, y0+26, prompt, 255, 255, 255, 255);
-		
+
 		drawrect(vid_buf, ed.x-4, ed.y-5, ed.w+4, 16, 192, 192, 192, 255);
 
 		ui_edit_draw(vid_buf, &ed);
@@ -1191,6 +1188,7 @@ void login_ui(pixel *vid_buf)
 
 	strcpy(svf_user, ed1.str);
 	md5_ascii(svf_pass, (unsigned char *)ed2.str, 0);
+
 	res = http_multipart_post(
 	          "http://" SERVER "/Login.api",
 	          NULL, NULL, NULL,
@@ -1215,7 +1213,7 @@ void login_ui(pixel *vid_buf)
 		if (!u_e)
 			goto fail;
 		*(u_e++) = 0;
-			
+
 		u_m = strchr(u_e, ' ');
 		if (!u_m) {
 			u_m = malloc(1);
@@ -1245,7 +1243,7 @@ void login_ui(pixel *vid_buf)
 		}
 		else
 		{
-			svf_admin = 0;
+			svf_admin = 1;
 			svf_mod = 0;
 		}
 		svf_messages = atoi(mres);
@@ -1609,7 +1607,7 @@ int save_name_ui(pixel *vid_buf)
 
 	fillrect(vid_buf, -1, -1, XRES+BARSIZE, YRES+MENUSIZE, 0, 0, 0, 192);
 	draw_rgba_image(vid_buf, save_to_server_image, 0, 0, 0.7);
-	
+
 	memcpy(old_vid, vid_buf, ((XRES+BARSIZE)*(YRES+MENUSIZE))*PIXELSIZE);
 
 	while (!sdl_poll())
@@ -1912,7 +1910,7 @@ void menu_ui_v3(pixel *vid_buf, int i, int *sl, int *sr, int *dae, int b, int bq
 	{
 		for (n = UI_WALLSTART; n<UI_WALLSTART+UI_WALLCOUNT; n++)
 		{
-			if (n!=SPC_AIR&&n!=SPC_HEAT&&n!=SPC_COOL&&n!=SPC_VACUUM&&n!=SPC_WIND&&n!=SPC_PGRV&&n!=SPC_NGRV)
+			if (n!=SPC_AIR&&n!=SPC_HEAT&&n!=SPC_COOL&&n!=SPC_VACUUM&&n!=SPC_WIND)
 			{
 				/*if (x-18<=2)
 				{
@@ -1945,48 +1943,41 @@ void menu_ui_v3(pixel *vid_buf, int i, int *sl, int *sr, int *dae, int b, int bq
 			}
 		}
 	}
-	else if (i==SC_TOOL)//tools menu
+	else if (i==SC_SPECIAL)//special menu
 	{
 		for (n = UI_WALLSTART; n<UI_WALLSTART+UI_WALLCOUNT; n++)
 		{
-			if (n==SPC_AIR||n==SPC_HEAT||n==SPC_COOL||n==SPC_VACUUM||n==SPC_WIND||n==SPC_PGRV||n==SPC_NGRV)
+			if (n==SPC_AIR||n==SPC_HEAT||n==SPC_COOL||n==SPC_VACUUM||n==SPC_WIND)
 			{
 				/*if (x-18<=0)
 				{
 					x = XRES-BARSIZE-18;
 					y += 19;
 				}*/
-				x -= draw_tool_xy(vid_buf, x-xoff, y, n, wtypes[n-UI_WALLSTART].colour)+5;
-				if (!bq && mx>=x+32-xoff && mx<x+58-xoff && my>=y && my< y+15)
+				x -= draw_tool_xy(vid_buf, x, y, n, wtypes[n-UI_WALLSTART].colour)+5;
+				if (!bq && mx>=x+32 && mx<x+58 && my>=y && my< y+15)
 				{
-					drawrect(vid_buf, x+30-xoff, y-1, 29, 17, 255, 55, 55, 255);
+					drawrect(vid_buf, x+30, y-1, 29, 17, 255, 55, 55, 255);
 					h = n;
 				}
-				if (!bq && mx>=x+32-xoff && mx<x+58-xoff && my>=y && my< y+15&&(sdl_mod & (KMOD_LALT) && sdl_mod & (KMOD_CTRL)))
+				if (!bq && mx>=x+32 && mx<x+58 && my>=y && my< y+15&&(sdl_mod & (KMOD_LALT) && sdl_mod & (KMOD_CTRL)))
 				{
-					drawrect(vid_buf, x+30-xoff, y-1, 29, 17, 0, 255, 255, 255);
+					drawrect(vid_buf, x+30, y-1, 29, 17, 0, 255, 255, 255);
 					h = n;
 				}
 				else if (n==SLALT)
 				{
-					drawrect(vid_buf, x+30-xoff, y-1, 29, 17, 0, 255, 255, 255);
+					drawrect(vid_buf, x+30, y-1, 29, 17, 0, 255, 255, 255);
 				}
 				else if (n==*sl)
 				{
-					drawrect(vid_buf, x+30-xoff, y-1, 29, 17, 255, 55, 55, 255);
+					drawrect(vid_buf, x+30, y-1, 29, 17, 255, 55, 55, 255);
 				}
 				else if (n==*sr)
 				{
-					drawrect(vid_buf, x+30-xoff, y-1, 29, 17, 55, 55, 255, 255);
+					drawrect(vid_buf, x+30, y-1, 29, 17, 55, 55, 255, 255);
 				}
 			}
-		}
-	}
-	else if (i==SC_SPECIAL)//special menu
-	{
-		if (fwidth > XRES-BARSIZE) { //fancy scrolling
-			float overflow = fwidth-(XRES-BARSIZE), location = ((float)XRES-BARSIZE)/((float)(mx-(XRES-BARSIZE)));
-			xoff = (int)(overflow / location);
 		}
 		for (n = 0; n<PT_NUM; n++)
 		{
@@ -1997,28 +1988,28 @@ void menu_ui_v3(pixel *vid_buf, int i, int *sl, int *sr, int *dae, int b, int bq
 					x = XRES-BARSIZE-18;
 					y += 19;
 				}*/
-				x -= draw_tool_xy(vid_buf, x-xoff, y, n, ptypes[n].pcolors)+5;
-				if (!bq && mx>=x+32-xoff && mx<x+58-xoff && my>=y && my< y+15)
+				x -= draw_tool_xy(vid_buf, x, y, n, ptypes[n].pcolors)+5;
+				if (!bq && mx>=x+32 && mx<x+58 && my>=y && my< y+15)
 				{
-					drawrect(vid_buf, x+30-xoff, y-1, 29, 17, 255, 55, 55, 255);
+					drawrect(vid_buf, x+30, y-1, 29, 17, 255, 55, 55, 255);
 					h = n;
 				}
-				if (!bq && mx>=x+32-xoff && mx<x+58-xoff && my>=y && my< y+15&&(sdl_mod & (KMOD_LALT) && sdl_mod & (KMOD_CTRL)))
+				if (!bq && mx>=x+32 && mx<x+58 && my>=y && my< y+15&&(sdl_mod & (KMOD_LALT) && sdl_mod & (KMOD_CTRL)))
 				{
-					drawrect(vid_buf, x+30-xoff, y-1, 29, 17, 0, 255, 255, 255);
+					drawrect(vid_buf, x+30, y-1, 29, 17, 0, 255, 255, 255);
 					h = n;
 				}
 				else if (n==SLALT)
 				{
-					drawrect(vid_buf, x+30-xoff, y-1, 29, 17, 0, 255, 255, 255);
+					drawrect(vid_buf, x+30, y-1, 29, 17, 0, 255, 255, 255);
 				}
 				else if (n==*sl)
 				{
-					drawrect(vid_buf, x+30-xoff, y-1, 29, 17, 255, 55, 55, 255);
+					drawrect(vid_buf, x+30, y-1, 29, 17, 255, 55, 55, 255);
 				}
 				else if (n==*sr)
 				{
-					drawrect(vid_buf, x+30-xoff, y-1, 29, 17, 55, 55, 255, 255);
+					drawrect(vid_buf, x+30, y-1, 29, 17, 55, 55, 255, 255);
 				}
 			}
 		}
@@ -2103,7 +2094,7 @@ void menu_ui_v3(pixel *vid_buf, int i, int *sl, int *sr, int *dae, int b, int bq
 	{
 		drawtext(vid_buf, XRES-textwidth((char *)msections[i].name)-BARSIZE, sy-10, (char *)msections[i].name, 255, 255, 255, 255);
 	}
-	else if (i==SC_WALL||i==SC_TOOL)
+	else if (i==SC_WALL||(i==SC_SPECIAL&&h>=UI_WALLSTART))
 	{
 		drawtext(vid_buf, XRES-textwidth((char *)wtypes[h-UI_WALLSTART].descs)-BARSIZE, sy-10, (char *)wtypes[h-UI_WALLSTART].descs, 255, 255, 255, 255);
 	}
@@ -2208,7 +2199,7 @@ int color_menu_ui(pixel *vid_buf, int i, int *cr, int *cg, int *cb, int b, int b
 int sdl_poll(void)
 {
 	SDL_Event event;
-	sdl_key=sdl_rkey=sdl_wheel=sdl_ascii=0;
+	sdl_key=sdl_wheel=sdl_ascii=0;
 	while (SDL_PollEvent(&event))
 	{
 		switch (event.type)
@@ -2220,10 +2211,7 @@ int sdl_poll(void)
 				sdl_caps = 1;
 			if (event.key.keysym.sym=='z')
 			{
-				if (event.key.keysym.mod&KMOD_ALT)//toggle
-					sdl_zoom_trig = (!sdl_zoom_trig)*2;
-				else
-					sdl_zoom_trig = 1;
+				sdl_zoom_trig = 1;
 			}
 			if ( event.key.keysym.sym == SDLK_PLUS)
 			{
@@ -2271,10 +2259,9 @@ int sdl_poll(void)
 			break;
 
 		case SDL_KEYUP:
-			sdl_rkey=event.key.keysym.sym;
 			if (event.key.keysym.sym == SDLK_CAPSLOCK)
 				sdl_caps = 0;
-			if (event.key.keysym.sym == 'z' && sdl_zoom_trig==1)//if ==2 then it was toggled with alt+z, don't turn off on keyup
+			if (event.key.keysym.sym == 'z')
 				sdl_zoom_trig = 0;
 			if (event.key.keysym.sym == SDLK_RIGHT || event.key.keysym.sym == SDLK_LEFT)
 			{
@@ -2722,7 +2709,7 @@ int search_ui(pixel *vid_buf)
 
 		tp = -1;
 		if (is_p1)
-		{	
+		{
 			//Message of the day
 			ui_richtext_process(mx, my, b, bq, &motd);
 			ui_richtext_draw(vid_buf, &motd);
@@ -2800,7 +2787,7 @@ int search_ui(pixel *vid_buf)
 					pixel *thumb_imgdata = ptif_unpack(search_thumbs[pos], search_thsizes[pos], &finw, &finh);
 					if(thumb_imgdata!=NULL){
 						thumb_rsdata = resample_img_nn(thumb_imgdata, finw, finh, XRES/GRID_S, YRES/GRID_S);
-						draw_image(v_buf, thumb_rsdata, gx, gy, XRES/GRID_S, YRES/GRID_S, 255);					
+						draw_image(v_buf, thumb_rsdata, gx, gy, XRES/GRID_S, YRES/GRID_S, 255);
 						free(thumb_imgdata);
 						free(thumb_rsdata);
 					}
@@ -2927,7 +2914,7 @@ int search_ui(pixel *vid_buf)
 					int finh, finw;
 					pixel *thumb_imgdata = ptif_unpack(search_thumbs[mp], search_thsizes[mp], &finw, &finh);
 					if(thumb_imgdata!=NULL){
-						bthumb_rsdata = resample_img(thumb_imgdata, finw, finh, XRES/GRID_Z, YRES/GRID_Z);				
+						bthumb_rsdata = resample_img(thumb_imgdata, finw, finh, XRES/GRID_Z, YRES/GRID_Z);
 						free(thumb_imgdata);
 					}
 				}
@@ -3113,7 +3100,7 @@ int search_ui(pixel *vid_buf)
 				memset(thumb_drawn, 0, sizeof(thumb_drawn));
 				memset(v_buf, 0, ((YRES+MENUSIZE)*(XRES+BARSIZE))*PIXELSIZE);
 				nmp = -1;
-			
+
 				ui_richtext_settext(server_motd, &motd);
 				motd.x = (XRES-textwidth(motd.printstr))/2;
 			}
@@ -3224,7 +3211,7 @@ finish:
 	for (i=0; i<IMGCONNS; i++)
 		if (img_http[i])
 			http_async_req_close(img_http[i]);
-			
+
 	if(bthumb_rsdata){
 		free(bthumb_rsdata);
 		bthumb_rsdata = NULL;
@@ -3363,14 +3350,14 @@ int open_ui(pixel *vid_buf, char *save_id, char *save_date)
 
 	//Try to load the thumbnail from the cache
 	if(!thumb_cache_find(save_id, &thumb_data, &thumb_data_size)){
-		thumb_data = NULL;	
+		thumb_data = NULL;
 	} else {
 		//We found a thumbnail in the cache, we'll draw this one while we wait for the full image to load.
 		int finw, finh;
 		pixel *thumb_imgdata = ptif_unpack(thumb_data, thumb_data_size, &finw, &finh);
 		if(thumb_imgdata!=NULL){
 			save_pic_thumb = resample_img(thumb_imgdata, finw, finh, XRES/2, YRES/2);
-			//draw_image(vid_buf, save_pic_thumb, 51, 51, XRES/2, YRES/2, 255);	
+			//draw_image(vid_buf, save_pic_thumb, 51, 51, XRES/2, YRES/2, 255);
 		}
 		free(thumb_imgdata);
 		//rescale_img(full_save, imgw, imgh, &thumb_w, &thumb_h, 2);
@@ -3508,7 +3495,7 @@ int open_ui(pixel *vid_buf, char *save_id, char *save_date)
 		if (save_pic_thumb!=NULL && !hasdrawncthumb) {
 			draw_image(vid_buf, save_pic_thumb, 51, 51, XRES/2, YRES/2, 255);
 			free(save_pic_thumb);
-			save_pic_thumb = NULL;		
+			save_pic_thumb = NULL;
 			hasdrawncthumb = 1;
 			memcpy(old_vid, vid_buf, ((XRES+BARSIZE)*(YRES+MENUSIZE))*PIXELSIZE);
 		}
@@ -4641,13 +4628,13 @@ char *console_ui(pixel *vid_buf,char error[255],char console_more) {
 		else
 			i=0;
 		if (pyready)
-			drawtext(vid_buf, 15, 15, "Welcome to The Powder Toy console v.3 (by cracker64, Python enabled)", 255, i, i, 255);
+			drawtext(vid_buf, 15, 15, "Welcome to The Powder Toy console v.3 (by cracker64, python by Doxin)", 255, i, i, 255);
 		else
-			drawtext(vid_buf, 15, 15, "Welcome to The Powder Toy console v.3 (by cracker64, Python disabled)", 255, i, i, 255);
+			drawtext(vid_buf, 15, 15, "Welcome to The Powder Toy console v.3 (by cracker64, python disabled)", 255, i, i, 255);
 #elif defined(LUACONSOLE)
 		drawtext(vid_buf, 15, 15, "Welcome to The Powder Toy console v.4 (by cracker64, Lua enabled)", 255, 255, 255, 255);
 #else
-		drawtext(vid_buf, 15, 15, "Welcome to The Powder Toy console v.3 (by cracker64)", 255, 255, 255, 255);
+		drawtext(vid_buf, 15, 15, "Welcome to The Powder Toy console v.3 (by cracker64, python disabled)", 255, 255, 255, 255);
 #endif
 
 		cc = 0;
@@ -4776,7 +4763,7 @@ unsigned int decorations_ui(pixel *vid_buf,int *bsx,int *bsy, unsigned int saved
 	int grid_offset_x;
 	int window_offset_x;
 	int onleft_button_offset_x;
-	int h = PIXR(savedColor), s = PIXG(savedColor), v = PIXB(savedColor); 
+	int h = PIXR(savedColor), s = PIXG(savedColor), v = PIXB(savedColor);
 	int th = h, ts = s, tv=v;
 	pixel *old_buf=calloc((XRES+BARSIZE)*(YRES+MENUSIZE), PIXELSIZE);
 	ui_edit box_R;
@@ -5094,7 +5081,7 @@ unsigned int decorations_ui(pixel *vid_buf,int *bsx,int *bsy, unsigned int saved
 
 		if (sdl_wheel)
 		{
-			if (sdl_zoom_trig)//zoom window change
+			if (sdl_zoom_trig==1)//zoom window change
 			{
 				ZSIZE += sdl_wheel;
 				if (ZSIZE>60)
@@ -5137,7 +5124,7 @@ unsigned int decorations_ui(pixel *vid_buf,int *bsx,int *bsy, unsigned int saved
 			}
 		}
 		if (sdl_key==SDLK_LEFTBRACKET) {
-			if (sdl_zoom_trig)
+			if (sdl_zoom_trig==1)
 			{
 				ZSIZE -= 1;
 				if (ZSIZE>60)
@@ -5177,7 +5164,7 @@ unsigned int decorations_ui(pixel *vid_buf,int *bsx,int *bsy, unsigned int saved
 			}
 		}
 		if (sdl_key==SDLK_RIGHTBRACKET) {
-			if (sdl_zoom_trig)
+			if (sdl_zoom_trig==1)
 			{
 				ZSIZE += 1;
 				if (ZSIZE>60)
@@ -5345,7 +5332,7 @@ int save_filename_ui(pixel *vid_buf)
 
 	save_data = build_save(&save_size, 0, 0, XRES, YRES, bmap, fvx, fvy, signs, parts);
 	save_data_image = prerender_save(save_data, save_size, &imgw, &imgh);
-	save = resample_img(save_data_image, imgw, imgh, XRES/3, YRES/3);	
+	save = resample_img(save_data_image, imgw, imgh, XRES/3, YRES/3);
 
 	ed.x = x0+11;
 	ed.y = y0+25;
@@ -5357,7 +5344,7 @@ int save_filename_ui(pixel *vid_buf)
 	ed.cursor = 0;
 	ed.multiline = 0;
 	ed.str[0] = 0;
-	
+
 	if(svf_fileopen){
 		char * dotloc = NULL;
 		strncpy(ed.str, svf_filename, 255);
@@ -5377,7 +5364,7 @@ int save_filename_ui(pixel *vid_buf)
 
 	fillrect(vid_buf, -1, -1, XRES+BARSIZE, YRES+MENUSIZE, 0, 0, 0, 192);
 	draw_rgba_image(vid_buf, save_to_disk_image, 0, 0, 0.7);
-	
+
 	memcpy(old_vid, vid_buf, ((XRES+BARSIZE)*(YRES+MENUSIZE))*PIXELSIZE);
 
 	while (!sdl_poll())
@@ -5393,7 +5380,7 @@ int save_filename_ui(pixel *vid_buf)
 		drawrect(vid_buf, x0+8, y0+20, xsize-16, 16, 255, 255, 255, 180);
 		draw_image(vid_buf, save, x0+8, y0+40, XRES/3, YRES/3, 255);
 		drawrect(vid_buf, x0+8, y0+40, XRES/3, YRES/3, 192, 192, 192, 255);
-		
+
 		drawrect(vid_buf, x0, y0+ysize-16, xsize, 16, 192, 192, 192, 255);
 		fillrect(vid_buf, x0, y0+ysize-16, xsize, 16, 170, 170, 192, (int)ca);
 		drawtext(vid_buf, x0+8, y0+ysize-12, "Save", 255, 255, 255, 255);
@@ -5406,7 +5393,7 @@ int save_filename_ui(pixel *vid_buf)
 		memcpy(vid_buf, old_vid, ((XRES+BARSIZE)*(YRES+MENUSIZE))*PIXELSIZE);
 
 		ui_edit_process(mx, my, b, &ed);
-		
+
 		if(mx > x0 && mx < x0+xsize && my > y0+ysize-16 && my < y0+ysize)
 		{
 			if(b && !bq)
@@ -5416,7 +5403,7 @@ int save_filename_ui(pixel *vid_buf)
 				char *filename = malloc(strlen(LOCAL_SAVE_DIR)+strlen(PATH_SEP)+strlen(ed.str)+5);
 				sprintf(filename, "%s%s%s.cps", LOCAL_SAVE_DIR, PATH_SEP, ed.str);
 				sprintf(savefname, "%s.cps", ed.str);
-			
+
 #ifdef WIN32
 				_mkdir(LOCAL_SAVE_DIR);
 #else
@@ -5456,7 +5443,7 @@ int save_filename_ui(pixel *vid_buf)
 			ed.focus = 0;
 		}
 	}
-		
+
 savefin:
 	while (!sdl_poll())
 	{
@@ -5485,9 +5472,9 @@ void catalogue_ui(pixel * vid_buf)
 	char * last = mystrdup("");
 	savelist_e *saves, *cssave, *csave;
 	ui_edit ed;
-	
+
 	vid_buf2 = calloc((XRES+BARSIZE)*(YRES+MENUSIZE), PIXELSIZE);
-	
+
 	ed.w = xsize-16-4;
 	ed.x = x0+11;
 	ed.y = y0+29;
@@ -5507,7 +5494,7 @@ void catalogue_ui(pixel * vid_buf)
 		if (!b)
 			break;
 	}
-	
+
 	fillrect(vid_buf, -1, -1, XRES+BARSIZE, YRES+MENUSIZE, 0, 0, 0, 192);
 	while (!sdl_poll())
 	{
@@ -5557,7 +5544,7 @@ void catalogue_ui(pixel * vid_buf)
 			} else {
 				offsetf = (YRES/CATALOGUE_S+20);
 			}
-		} 
+		}
 		if(offsetf > 0.0f && rescount <= CATALOGUE_X*CATALOGUE_Y && rescount)
 		{
 			offsetf = 0.0f;
@@ -5687,7 +5674,7 @@ void catalogue_ui(pixel * vid_buf)
 		if (sdl_key==SDLK_ESCAPE)
 			break;
 	}
-openfin:	
+openfin:
 	while (!sdl_poll())
 	{
 		b = SDL_GetMouseState(&mx, &my);
@@ -5703,7 +5690,7 @@ openfin:
 void simulation_ui(pixel * vid_buf)
 {
 	int xsize = 300;
-	int ysize = 164;
+	int ysize = 190;
 	int x0=(XRES-xsize)/2,y0=(YRES-MENUSIZE-ysize)/2,b=1,bq,mx,my;
 	int new_scale, new_kiosk;
 	ui_checkbox cb;
@@ -5711,6 +5698,7 @@ void simulation_ui(pixel * vid_buf)
 	ui_checkbox cb3;
 	ui_checkbox cb4;
 	ui_checkbox cb5;
+	ui_checkbox cb6;
 
 	cb.x = x0+xsize-16;		//Heat simulation
 	cb.y = y0+23;
@@ -5721,21 +5709,26 @@ void simulation_ui(pixel * vid_buf)
 	cb2.y = y0+79;
 	cb2.focus = 0;
 	cb2.checked = ngrav_enable;
-	
+
 	cb3.x = x0+xsize-16;	//Large window
-	cb3.y = y0+113;
+	cb3.y = y0+140;
 	cb3.focus = 0;
 	cb3.checked = (sdl_scale==2)?1:0;
-	
+
 	cb4.x = x0+xsize-16;	//Fullscreen
-	cb4.y = y0+129;
+	cb4.y = y0+156;
 	cb4.focus = 0;
 	cb4.checked = (kiosk_enable==1)?1:0;
-	
+
 	cb5.x = x0+xsize-16;	//Ambient heat
 	cb5.y = y0+51;
 	cb5.focus = 0;
 	cb5.checked = aheat_enable;
+
+    cb6.x = x0+xsize-16;	//Oxygen Realism
+	cb6.y = y0+107;
+	cb6.focus = 0;
+	cb6.checked = oxy_enable;
 
 	while (!sdl_poll())
 	{
@@ -5758,7 +5751,7 @@ void simulation_ui(pixel * vid_buf)
 		drawtext(vid_buf, x0+8, y0+26, "Heat simulation", 255, 255, 255, 255);
 		drawtext(vid_buf, x0+12+textwidth("Heat simulation"), y0+26, "Introduced in version 34.", 255, 255, 255, 180);
 		drawtext(vid_buf, x0+12, y0+40, "Older saves may behave oddly with this enabled.", 255, 255, 255, 120);
-		
+
 		drawtext(vid_buf, x0+8, y0+54, "Ambient heat simulation", 255, 255, 255, 255);
 		drawtext(vid_buf, x0+12+textwidth("Ambient heat simulation"), y0+54, "Introduced in version 50.", 255, 255, 255, 180);
 		drawtext(vid_buf, x0+12, y0+68, "Older saves may behave oddly with this enabled.", 255, 255, 255, 120);
@@ -5766,14 +5759,18 @@ void simulation_ui(pixel * vid_buf)
 		drawtext(vid_buf, x0+8, y0+82, "Newtonian gravity", 255, 255, 255, 255);
 		drawtext(vid_buf, x0+12+textwidth("Newtonian gravity"), y0+82, "Introduced in version 48.", 255, 255, 255, 180);
 		drawtext(vid_buf, x0+12, y0+96, "May also cause slow performance on older computers", 255, 255, 255, 120);
-		
-		draw_line(vid_buf, x0, y0+110, x0+xsize, y0+110, 150, 150, 150, XRES+BARSIZE);
-		
-		drawtext(vid_buf, x0+8, y0+116, "Large window", 255, 255, 255, 255);
-		drawtext(vid_buf, x0+12+textwidth("Large window"), y0+116, "Double window size for small screens", 255, 255, 255, 180);
-		
-		drawtext(vid_buf, x0+8, y0+132, "Fullscreen", 255, 255, 255, 255);
-		drawtext(vid_buf, x0+12+textwidth("Fullscreen"), y0+132, "Fill the entire screen", 255, 255, 255, 180);
+
+        drawtext(vid_buf, x0+8, y0+110, "Realistic O2 burning", 255, 255, 255, 255);
+		drawtext(vid_buf, x0+12+textwidth("Realistic O2 burning"), y0+110, "Introduced in cctvmod v0.1", 255, 255, 255, 180);
+        drawtext(vid_buf, x0+12, y0+124, "When O2 burns it increases the life/temp of fire", 255, 255, 255, 120);
+
+		draw_line(vid_buf, x0, y0+136, x0+xsize, y0+136, 150, 150, 150, XRES+BARSIZE);
+
+		drawtext(vid_buf, x0+8, y0+142, "Large window", 255, 255, 255, 255);
+		drawtext(vid_buf, x0+12+textwidth("Large window"), y0+142, "Double window size for small screens", 255, 255, 255, 180);
+
+		drawtext(vid_buf, x0+8, y0+158, "Fullscreen", 255, 255, 255, 255);
+		drawtext(vid_buf, x0+12+textwidth("Fullscreen"), y0+158, "Fill the entire screen", 255, 255, 255, 180);
 
 		//TODO: Options for Air and Normal gravity
 		//Maybe save/load defaults too.
@@ -5786,12 +5783,14 @@ void simulation_ui(pixel * vid_buf)
 		ui_checkbox_draw(vid_buf, &cb3);
 		ui_checkbox_draw(vid_buf, &cb4);
 		ui_checkbox_draw(vid_buf, &cb5);
+        ui_checkbox_draw(vid_buf, &cb6);
 		sdl_blit(0, 0, (XRES+BARSIZE), YRES+MENUSIZE, vid_buf, (XRES+BARSIZE));
 		ui_checkbox_process(mx, my, b, bq, &cb);
 		ui_checkbox_process(mx, my, b, bq, &cb2);
 		ui_checkbox_process(mx, my, b, bq, &cb3);
 		ui_checkbox_process(mx, my, b, bq, &cb4);
 		ui_checkbox_process(mx, my, b, bq, &cb5);
+		ui_checkbox_process(mx, my, b, bq, &cb6);
 
 		if (b && !bq && mx>=x0 && mx<x0+xsize && my>=y0+ysize-16 && my<=y0+ysize)
 			break;
@@ -5804,6 +5803,7 @@ void simulation_ui(pixel * vid_buf)
 
 	legacy_enable = !cb.checked;
 	aheat_enable = cb5.checked;
+	oxy_enable = cb6.checked;
 	new_scale = (cb3.checked)?2:1;
 	new_kiosk = (cb4.checked)?1:0;
 	if(new_scale!=sdl_scale || new_kiosk!=kiosk_enable)

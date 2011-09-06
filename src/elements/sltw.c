@@ -7,7 +7,7 @@ int update_SLTW(UPDATE_FUNC_ARGS) {
 			if (x+rx>=0 && y+ry>0 && x+rx<XRES && y+ry<YRES && (rx || ry))
 			{
 				r = pmap[y+ry][x+rx];
-				if (!r)
+				if ((r>>8)>=NPART || !r)
 					continue;
 				if ((r&0xFF)==PT_SALT && 1>(rand()%10000))
 					kill_part(r>>8);
@@ -17,13 +17,6 @@ int update_SLTW(UPDATE_FUNC_ARGS) {
 				{
 					part_change_type(i,x,y,PT_FIRE);
 					parts[i].life = 4;
-				}
-				if ((r&0xFF)==PT_FIRE){
-					kill_part(r>>8);
-						if(1>(rand()%150)){
-							kill_part(i);
-							return 1;
-						}
 				}
 			}
 	return 0;

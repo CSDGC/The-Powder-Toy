@@ -129,6 +129,8 @@ static char *getport(char *host)
 
 static int resolve(char *dns, char *srv, struct sockaddr_in *addr)
 {
+    #define freeaddrinfo
+    #define getaddrinfo
 	struct addrinfo hnt, *res = 0;
 	if (http_use_proxy)
 	{

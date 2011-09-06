@@ -77,12 +77,7 @@ int main(int argc, char *argv[])
     fread(font, CELLW*CELLH, 256, f);
     fclose(f);
 
-    printf("#ifndef FONT_H_CHECK\n");
-    printf("#define FONT_H_CHECK\n");
-    
     printf("#define FONT_H %d\n", ysize);
-    
-    printf("#ifdef INCLUDE_FONTDATA\n");
 
     printf("char font_data[] = {\n");
     for(c=0; c<256; c++) {
@@ -102,8 +97,6 @@ int main(int argc, char *argv[])
 	    printf(" ");
     }
     printf("};\n");
-    
-    printf("#endif\n#endif\n");
 
     return 0;
 }

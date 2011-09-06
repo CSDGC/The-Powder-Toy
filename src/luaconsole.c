@@ -1,8 +1,13 @@
-#include <defines.h>
 #ifdef LUACONSOLE
 #include <powder.h>
 #include <console.h>
 #include <luaconsole.h>
+#include <lua.h>
+#include <lauxlib.h>
+#include <lualib.h>
+#include <lua5.1/lua.h>
+#include <lua5.1/lauxlib.h>
+#include <lua5.1/lualib.h>
 
 lua_State *l;
 int step_functions[6] = {0, 0, 0, 0, 0, 0};
@@ -40,10 +45,6 @@ void luacon_open(){
 		{"unregister_mouseclick", &luatpt_unregister_mouseclick},
 		{"register_keypress", &luatpt_register_keypress},
 		{"unregister_keypress", &luatpt_unregister_keypress},
-		{"register_mouseevent", &luatpt_register_mouseclick},
-		{"unregister_mouseevent", &luatpt_unregister_mouseclick},
-		{"register_keyevent", &luatpt_register_keypress},
-		{"unregister_keyevent", &luatpt_unregister_keypress},
 		{"input", &luatpt_input},
 		{"message_box", &luatpt_message_box},
 		{"get_numOfParts", &luatpt_get_numOfParts},
@@ -58,36 +59,29 @@ void luacon_open(){
 		{"display_mode", &luatpt_cmode_set},
 		{"throw_error", &luatpt_error},
 		{"heat", &luatpt_heat},
-		{"setfire", &luatpt_setfire},
-		{"setdebug", &luatpt_setdebug},
-		{"setfpscap",&luatpt_setfpscap},
-		{"getscript",&luatpt_getscript},
-		{"setwindowsize",&luatpt_setwindowsize},
 		{NULL,NULL}
 	};
 
 	l = lua_open();
 	luaL_openlibs(l);
 	luaL_register(l, "tpt", tptluaapi);
-	
+
 	tptProperties = lua_gettop(l);
-	
+
 	lua_pushinteger(l, 0);
 	lua_setfield(l, tptProperties, "mousex");
 	lua_pushinteger(l, 0);
 	lua_setfield(l, tptProperties, "mousey");
 }
-int luacon_keyevent(int key, int modifier, int event){
+int luacon_keypress(char key, int modifier){
 	int i = 0, kpcontinue = 1;
-	char tempkey[] = {key, 0};
 	if(keypress_function_count){
 		for(i = 0; i < keypress_function_count && kpcontinue; i++){
 			lua_rawgeti(l, LUA_REGISTRYINDEX, keypress_functions[i]);
-			lua_pushstring(l, tempkey);
+			lua_pushstring(l, &key);
 			lua_pushinteger(l, key);
 			lua_pushinteger(l, modifier);
-			lua_pushinteger(l, event);
-			lua_pcall(l, 4, 1, 0);
+			lua_pcall(l, 3, 1, 0);
 			if(lua_isboolean(l, -1)){
 				kpcontinue = lua_toboolean(l, -1);
 			}
@@ -96,15 +90,15 @@ int luacon_keyevent(int key, int modifier, int event){
 	}
 	return kpcontinue;
 }
-int luacon_mouseevent(int mx, int my, int mb, int event){
+int luacon_mouseclick(int mx, int my, int mb, int mbq){
 	int i = 0, mpcontinue = 1;
 	if(mouseclick_function_count){
 		for(i = 0; i < mouseclick_function_count && mpcontinue; i++){
 			lua_rawgeti(l, LUA_REGISTRYINDEX, mouseclick_functions[i]);
+			lua_pushinteger(l, mbq);
+			lua_pushinteger(l, mb);
 			lua_pushinteger(l, mx);
 			lua_pushinteger(l, my);
-			lua_pushinteger(l, mb);
-			lua_pushinteger(l, event);
 			lua_pcall(l, 4, 1, 0);
 			if(lua_isboolean(l, -1)){
 				mpcontinue = lua_toboolean(l, -1);
@@ -116,12 +110,12 @@ int luacon_mouseevent(int mx, int my, int mb, int event){
 }
 int luacon_step(int mx, int my){
 	int tempret = 0, tempb, i, callret;
-	lua_pushinteger(l, my);
-	lua_pushinteger(l, mx);
-	lua_setfield(l, tptProperties, "mousex");
-	lua_setfield(l, tptProperties, "mousey");
 	if(step_functions[0]){
 		//Set mouse globals
+		lua_pushinteger(l, my);
+		lua_pushinteger(l, mx);
+		lua_setfield(l, tptProperties, "mousex");
+		lua_setfield(l, tptProperties, "mousey");
 		for(i = 0; i<6; i++){
 			if(step_functions[i]){
 				lua_rawgeti(l, LUA_REGISTRYINDEX, step_functions[i]);
@@ -505,7 +499,7 @@ int luatpt_set_property(lua_State* l)
 		for (nx = x; nx<x+w; nx++)
 			for (ny = y; ny<y+h; ny++){
 				r = pmap[ny][nx];
-				if (!r || (partsel && partsel != parts[r>>8].type))
+				if (!r || (r>>8) >= NPART || (partsel && partsel != parts[r>>8].type))
 				{
 					r = photons[ny][nx];
 					if (!r || (partsel && partsel != parts[r>>8].type))
@@ -524,9 +518,9 @@ int luatpt_set_property(lua_State* l)
 			if (i>=XRES || y>=YRES)
 				return luaL_error(l, "Coordinates out of range (%d,%d)", i, y);
 			r = pmap[y][i];
-			if (!r || (partsel && partsel != parts[r>>8].type))
+			if (!r || (r>>8)>=NPART || (partsel && partsel != parts[r>>8].type))
 				r = photons[y][i];
-			if (!r || (partsel && partsel != parts[r>>8].type))
+			if (!r || (r>>8)>=NPART || (partsel && partsel != parts[r>>8].type))
 				return 0;
 			i = r>>8;
 		}
@@ -554,9 +548,9 @@ int luatpt_get_property(lua_State* l)
 	y = luaL_optint(l, 3, -1);
 	if(y!=-1 && y < YRES && y >= 0 && i < XRES && i >= 0){
 		r = pmap[y][i];
-		if (!r)
+		if (!r || (r>>8)>=NPART)
 			r = photons[y][i];
-		if (!r)
+		if (!r || (r>>8)>=NPART)
 		{
 			if (strcmp(prop,"type")==0){
 				lua_pushinteger(l, 0);
@@ -755,7 +749,7 @@ int luatpt_delete(lua_State* l)
 	}
 	arg2 = abs(arg2);
 	if(arg2 < YRES && arg1 < XRES){
-		delete_part(arg1, arg2, 0);
+		delete_part(arg1, arg2);
 		return 0;
 	}
 	return luaL_error(l,"Invalid coordinates or particle ID");
@@ -1040,133 +1034,16 @@ int luatpt_decorations_enable(lua_State* l)
 
 int luatpt_heat(lua_State* l)
 {
-	int heatstate;	
-	heatstate = luaL_optint(l, 1, 0);	
+	int heatstate;
+	heatstate = luaL_optint(l, 1, 0);
 	legacy_enable = (heatstate==1?0:1);
-	return 0;	
+	return 0;
 }
 int luatpt_cmode_set(lua_State* l)
 {
     int aheatstate;
-    aheatstate = luaL_optint(l, 1, CM_FIRE);
+    aheatstate = luaL_optint(l, 1, CM_COUNT);
     cmode = aheatstate;
     return 0;
 }
-int luatpt_setfire(lua_State* l)
-{
-	int firesize = luaL_optint(l, 2, 4);
-	float fireintensity = (float)luaL_optnumber(l, 1, 1.0f);
-	prepare_alpha(firesize, fireintensity);
-	return 0;
-}
-int luatpt_setdebug(lua_State* l)
-{
-	int debug = luaL_optint(l, 1, 0);
-	debug_flags = debug;
-	return 0;
-}
-int luatpt_setfpscap(lua_State* l)
-{
-int fpscap = luaL_optint(l, 1, 0);
-limitFPS = fpscap;
-return 0;
-}
-int luatpt_getscript(lua_State* l)
-{
-	char *fileid = NULL, *filedata = NULL, *fileuri = NULL, *fileauthor = NULL, *filename = NULL, *lastError = NULL, *luacommand = NULL;
-	int len, ret,run_script;
-	FILE * outputfile;
-
-	fileauthor = mystrdup(luaL_optstring(l, 1, ""));
-	fileid = mystrdup(luaL_optstring(l, 2, ""));
-	run_script = luaL_optint(l, 3, 0);
-	if(!fileauthor || !fileid || strlen(fileauthor)<1 || strlen(fileid)<1)
-		goto fin;
-	if(!confirm_ui(vid_buf, "Do you want to install script?", fileid, "Install"))
-		goto fin;
-
-	fileuri = malloc(strlen(SCRIPTSERVER)+strlen(fileauthor)+strlen(fileid)+44);
-	sprintf(fileuri, "http://" SCRIPTSERVER "/GetScript.api?Author=%s&Filename=%s", fileauthor, fileid);
-	
-	filedata = http_auth_get(fileuri, svf_user_id, NULL, svf_session_id, &ret, &len);
-	
-	if(len <= 0 || !filedata)
-	{
-		lastError = "Server did not return data.";
-		goto fin;
-	}
-	if(ret != 200)
-	{
-		lastError = http_ret_text(ret);
-		goto fin;
-	}
-	
-	filename = malloc(strlen(fileauthor)+strlen(fileid)+strlen(PATH_SEP)+strlen(LOCAL_LUA_DIR)+6);
-	sprintf(filename, LOCAL_LUA_DIR PATH_SEP "%s_%s.lua", fileauthor, fileid);
-	
-#ifdef WIN32
-	_mkdir(LOCAL_LUA_DIR);
-#else
-	mkdir(LOCAL_LUA_DIR, 0755);
-#endif
-	
-	outputfile = fopen(filename, "r");
-	if(outputfile)
-	{
-		fclose(outputfile);
-		outputfile = NULL;
-		if(confirm_ui(vid_buf, "File already exists, overwrite?", filename, "Overwrite"))
-		{
-			outputfile = fopen(filename, "w");
-		}
-		else
-		{
-			goto fin;
-		}
-	}
-	else
-	{
-		outputfile = fopen(filename, "w");
-	}
-	
-	if(!outputfile)
-	{
-		lastError = "Unable to write to file";
-		goto fin;
-	}
-	
-	
-	fputs(filedata, outputfile);
-	fclose(outputfile);
-	outputfile = NULL;
-	if(run_script)
-	{
-    luacommand = malloc(strlen(filename)+20);
-    sprintf(luacommand,"dofile(\"%s\")",filename);
-    luacon_eval(luacommand);
-    }
-    
-fin:
-	if(fileid) free(fileid);
-	if(filedata) free(filedata);
-	if(fileuri) free(fileuri);
-	if(fileauthor) free(fileauthor);
-	if(filename) free(filename);
-	if(luacommand) free(luacommand);
-	luacommand = NULL;
-		
-	if(lastError) return luaL_error(l, lastError);
-	return 0;
-}
-
-int luatpt_setwindowsize(lua_State* l)
-{
-	int result, scale = luaL_optint(l,1,1), kiosk = luaL_optint(l,2,0);
-	if (scale!=2) scale = 1;
-	if (kiosk!=1) kiosk = 0;
-	result = set_scale(scale, kiosk);
-	lua_pushnumber(l, result);
-	return 1;
-}
-
 #endif

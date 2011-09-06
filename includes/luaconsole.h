@@ -11,16 +11,10 @@
 #endif
 #include <defines.h>
 
-#define LUACON_MDOWN 1
-#define LUACON_MUP 2
-#define LUACON_MPRESS 3
-#define LUACON_KDOWN 1
-#define LUACON_KUP 2
-
 void luacon_open();
 int luacon_step(int mx, int my);
-int luacon_mouseevent(int mx, int my, int mb, int event);
-int luacon_keyevent(int key, int modifier, int event);
+int luacon_mouseclick(int mx, int my, int mb, int mbq);
+int luacon_keypress(char key, int modifier);
 int luacon_eval(char *command);
 char *luacon_geterror();
 void luacon_close();
@@ -70,9 +64,4 @@ int luatpt_decorations_enable(lua_State* l);
 int luatpt_cmode_set(lua_State* l);
 int luatpt_error(lua_State* l);
 int luatpt_heat(lua_State* l);
-int luatpt_setfire(lua_State* l);
-int luatpt_setdebug(lua_State* l);
-int luatpt_setfpscap(lua_State* l);
-int luatpt_getscript(lua_State* l);
-int luatpt_setwindowsize(lua_State* l);
 #endif
